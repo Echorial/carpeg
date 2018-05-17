@@ -1,0 +1,55 @@
+class Carpeg.expressions.labeled inherits Carpeg.expression {
+	bound public Carpeg.expression child = empty;
+	
+	bound public string label = "";
+	
+	fixed public <Carpeg.expressions.labeled>function @construct(map data) {
+		this.baked = data;
+	}
+	
+	bound public override <string>function resetAllCaptureData() {
+		return this.child.resetAllCaptureData();
+	}
+
+	bound public override <string>function generate() {
+		return this.child.generate();
+	}
+
+	bound public override <string>function resetDatas(bool already) {
+		return this.child.resetDatas(already);
+	}
+	
+	bound public override <string>function display() {
+		return this.child.display();
+	}
+
+	bound public override <void>function updateChildren() {
+		this.child.overError = this.overError;
+		this.child.doError = this.doError;
+		this.child.overMove = this.overMove;
+		this.child.doMove = this.doMove;
+	}
+
+	bound public override <void>function build() {
+		var map bakedData = this.baked;
+		var string label = bakedData["label"];
+		this.label = label;
+		this.context.childLabels[this.label] = this;
+		this.child = Carpeg.expression.make(bakedData["expression"]);
+		this.child.apply(this);
+		this.context.isLabeled = true;
+		this.context.label = this.label;
+		
+		this.child.context = this.context;
+
+		this.child.copy(this);
+		this.child.directLabel = true;
+		this.child.parentLabel = label;
+		this.child.isLabeled = true;
+
+		this.child.build();
+		this.updateLoose();
+		
+		this.outputType = this.child.outputType;
+	}
+}

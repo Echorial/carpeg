@@ -1,0 +1,123 @@
+class Carpeg.expressions.choice inherits Carpeg.expression {
+	bound public <Carpeg.expression>array list = new <Carpeg.expression>array();
+	bound public Carpeg.expression groupTop = empty;
+	bound public int last = 0;
+
+	fixed public <Carpeg.expressions.choice>function @construct(map data) {
+		this.baked = data;
+	}
+	
+	bound public override <string>function display() {
+		var <string>array strs = new <string>array();
+		for (var int i in this.list) {
+			var Carpeg.expression exp = this.list[i];
+			strs.push(exp.display());
+		}
+		return strs.join(", ");
+	}
+
+	bound public override <string>function generate() {
+		var string out = "";
+		
+		var <Carpeg.expression>array list = this.list;
+		for (var int i in list) {
+			var Carpeg.expression sub = list[i];
+			out += sub.generate();
+		}
+		
+		return out;
+	}
+	
+	bound public override <string>function move(Carpeg.expression exp) {
+		return this.parentRule.moveNext(this.context.next);
+	}
+
+	bound public override <string>function error(Carpeg.expression exp, string code, string err, string char) {
+		var int ctx = exp.context.next;
+		if (this.parentRule.checkerIndex == 0) {
+			ctx = 2;
+		}
+
+		if (exp.context.checkerIndex == this.last) {
+			return this.callError("1", this.display(), "currentChar");
+		}else{
+			return this.parentRule.moveNext(ctx) + " charPos--; this.offset--;";
+		}
+	}
+
+	bound public override <void>function build() {
+		this.outputType = "map";
+		var map bakedData = this.baked;
+		var <map>array expressions = bakedData["alternatives"];
+		for (var int i in expressions) {
+			var map data = expressions[i];
+			var Carpeg.expression out = Carpeg.expression.make(data);
+			out.apply(this);
+			out.context = new Carpeg.context();
+			
+			out.context.hasAction = this.context.hasAction;
+			out.context.action = this.context.action;
+			
+			out.context.childLabels = this.context.childLabels;
+			out.context.clone(this.context);
+			
+			var string subType = data["type"];
+			
+			out.context.checkerIndex = this.parentRule.checkerIndex;
+
+			out.context.firstChild = out;
+			
+			out.captureTo = this.captureTo;
+
+			out.context.putAfterLast = true;
+			out.copy(this);
+
+			if (this.dynamicCapture) {
+				out.doOwnCapture = false;
+			}else{
+				out.directLabel = true;
+			}
+
+			var string conv = i;
+			if (int.parse(conv) != expressions.length() - 1) {
+				out.doError = true;
+				out.overError = this;
+				if (this.dynamicCapture == false) {
+					out.doMove = true;
+					out.overMove = this;
+				}
+				out.build();
+				out.context.next = this.parentRule.checkerIndex + 1;
+				this.parentRule.checkerIndex++;
+			}else{
+				out.doError = true;
+				out.overError = this;
+				if (this.dynamicCapture == false) {
+					out.doMove = true;
+					out.overMove = this;
+				}
+				out.build();
+				out.context.next = this.parentRule.checkerIndex + 1;
+				this.last = out.context.checkerIndex;
+			}
+			
+			this.list.push(out);
+		}
+		
+		if (this.context.putAfterLast) {
+			var string ind = this.list.length() - 1;
+			var Carpeg.expression exp = this.list[ind];
+			exp.context.putAfterLast = true;
+			exp.context.copyOverrides(this.context);
+		}
+
+		var Carpeg.expression first = this.list["0"];
+		this.context.firstChild = first;
+		if (this.context.parent !== empty) {
+			this.context.parent.firstChild = first;
+		}
+		if (this.parentExpression !== empty) {
+			this.parentExpression.context.next = this.parentRule.checkerIndex + 1;
+		}
+	}
+}

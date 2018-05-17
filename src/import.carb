@@ -1,0 +1,46 @@
+class Carpeg.import inherits object {
+	bound public <string>function output() {}
+
+	bound public map parameters = new map();
+	bound public string name = "";
+
+	bound public <Carpeg.import>function @construct(map data) {
+		if ("parameters" in data) {
+			this.parameters = data["parameters"];
+		}
+
+		if ("as" in data) {
+			this.name = data["as"];
+		}
+	}
+
+	fixed public <Carpeg.import>function make(string name, map data) {
+		var Carpeg.import rtn = empty;
+		if (name == "WhiteSpace") {
+			rtn = new Carpeg.imports.WhiteSpace(data);
+		}else if (name == "String") {
+			rtn = new Carpeg.imports.String(data);
+		}else if (name == "Json") {
+			rtn = new Carpeg.imports.Json(data);
+		}
+		return rtn;
+	}
+}
+
+class Carpeg.imports.WhiteSpace inherits Carpeg.import {
+	bound public override <string>function output() {
+		return "string|_ 'White space(optional)' = [ \\t\\r\\n]**;string|__ 'White space' = w: [ \\t\\r\\n]++;";
+	}
+}
+
+class Carpeg.imports.String inherits Carpeg.import {
+	bound public override <string>function output() {
+		return "string|String = str: (String_Double / String_Single) {string|export = $str;};\n\nstring|String_Double = '\"' str:\n<string{\nvar bool escaped = false;\nvar map escapeCodes = new map();\nescapeCodes[\"n\"] = \"\\n\";\nescapeCodes[\"b\"] = \"\\b\";\nescapeCodes[\"f\"] = \"\\f\";\nescapeCodes[\"r\"] = \"\\r\";\nescapeCodes[\"t\"] = \"\\t\";\nescapeCodes[\"v\"] = \"\\v\";\nescapeCodes[\"\\\\\"] = \"\\\\\";\n}|\n\nvar bool doCapture = true;\n\nif (currentChar == \"\\\\\") {if (escaped == false) {escaped = true; doCapture = false;}}\n\nif (currentChar == \"\\\"\") {\n  if (escaped == false) {\n    doCapture = false;\n    @error(1, \"\", \"\")\n  }\n  escaped = false;\n}else if (escaped and doCapture == true) {\n  doCapture = false;\n  @capture(escapeCodes[currentChar])\n  escaped = false;\n}\n\nif (doCapture) {\n  @capture(currentChar)\n}\n\n>** '\"' {string|export = $str;};\n\nstring|String_Single = \"'\" str: <string{\nvar bool escaped = false;\nvar map escapeCodes = new map();\nescapeCodes[\"n\"] = \"\\n\";\nescapeCodes[\"b\"] = \"\\b\";\nescapeCodes[\"f\"] = \"\\f\";\nescapeCodes[\"r\"] = \"\\r\";\nescapeCodes[\"t\"] = \"\\t\";\nescapeCodes[\"v\"] = \"\\v\";\nescapeCodes[\"\\\\\"] = \"\\\\\";\n}|\n\nvar bool doCapture = true;\n\nif (currentChar == \"\\\\\") {if (escaped == false) {escaped = true; doCapture = false;}}\n\nif (currentChar == \"'\") {\n  if (escaped == false) {\n    doCapture = false;\n    @error(1, \"\", \"\")\n  }\n  escaped = false;\n}else if (escaped and doCapture == true) {\n  doCapture = false;\n  @capture(escapeCodes[currentChar])\n  escaped = false;\n}\n\nif (doCapture) {\n  @capture(currentChar)\n}\n\n>** \"'\" {string|export = $str;};";
+	}
+}
+
+class Carpeg.imports.Json inherits Carpeg.import {
+	bound public override <string>function output() {
+		return "map|Json = \"{\" _ keys: ( _ key: String _ \":\" _ val: Json_Value _)*|\",\" _ \"}\" {map|\nfor (var int i in $keys) {\n    var map k = $keys[i];\n    var string key = k[\"key\"];\n    export[key] = k[\"val\"];\n}};\n\nmap|Json_Array = \"[\" _ vals: Json_Value*|\",\" _ \"]\" {map|export = $vals;};\n\n<map>array|Json_EmptyArray = \"[\" _ \"]\" {<map>array|~ = new <map>array();};\n\nmap|Json_EmptyMap = \"{\" _ \"}\" {map|~ = new map();};\n\nint|Json_Value = _ exp: ((\"null\" {empty|~ = empty;}) / (\"true\" {bool|~ = true;}) / (\"false\" {bool|~ = false;}) / Json_EmptyArray / Json_EmptyMap / Json_Array / Json / String / Json_Number) _ {int|export = $exp;};\n\nint|Json_Number = nums: [0-9-.]++ {int|export = string.parseInt($nums);};";
+	}
+}

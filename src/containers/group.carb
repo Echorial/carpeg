@@ -1,0 +1,68 @@
+class Carpeg.expressions.group inherits Carpeg.expression {
+	bound public Carpeg.expression expression = empty;
+	
+	fixed public <Carpeg.expressions.group>function @construct(map data) {
+		this.baked = data;
+	}
+	
+	bound public override <string>function generate() {
+		return this.expression.generate();
+	}
+	
+	bound public override <string>function display() {
+		return this.expression.display();
+	}
+
+
+	bound public override <string>function resetDatas(bool already) {
+		var int root = this.expression.captureTo;
+		var <string>array rtn = new <string>array();
+		var string set = "new map();";
+		if (this.dynamicCapture) {
+		}else{
+			set = this.capturePlace() + ";";
+			rtn.push(this.capturePlace() + " = new map();\n");
+		}
+		var string create = "";
+		if (already == false) {
+			create = "var map ";
+		}
+		
+		rtn.push(create + "captureRoot" + root + " = " + set + "\n" + this.expression.resetDatas(already));
+		return rtn.join("");
+	}
+
+	bound public override bool isComplex = true;
+
+	bound public override <void>function build() {
+		if (this.parentExpression !== empty) {
+			this.parentExpression.hasComplexChild(this);
+		}
+		var map data = this.baked["expression"];
+		this.expression = Carpeg.expression.make(data);
+		this.expression.apply(this);
+		this.expression.context = new Carpeg.context();
+		
+		this.expression.context.copyOverrides(this.context);
+		
+		this.expression.context.hasAction = this.context.hasAction;
+		this.expression.context.action = this.context.action;
+		
+		this.expression.context.parent = this.context;
+		this.expression.context.parentCapture = this.context;
+		this.expression.context.checkerIndex = this.context.checkerIndex;
+		this.expression.context.next = this.context.next;
+		
+		this.expression.copy(this);
+
+		this.parentRule.captureIndex++;
+		this.expression.captureTo = this.parentRule.captureIndex;
+		this.realCaptureTo = this.expression.captureTo;
+
+		this.expression.context.putAfterLast = true;
+		var int prev = this.expression.context.addCapture(this);
+		this.expression.build();
+		
+		this.outputType = this.expression.outputType;
+	}
+}

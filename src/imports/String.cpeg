@@ -1,0 +1,70 @@
+string|String = str: (String_Double / String_Single) {string|export = $str;};
+
+string|String_Double = '"' str:
+<string{
+var bool escaped = false;
+var map escapeCodes = new map();
+escapeCodes["n"] = "\n";
+escapeCodes["b"] = "\b";
+escapeCodes["f"] = "\f";
+escapeCodes["r"] = "\r";
+escapeCodes["t"] = "\t";
+escapeCodes["v"] = "\v";
+escapeCodes["\\"] = "\\";
+}|
+
+var bool doCapture = true;
+
+if (currentChar == "\\") {if (escaped == false) {escaped = true; doCapture = false;}}
+
+if (currentChar == "\"") {
+  if (escaped == false) {
+    doCapture = false;
+    @error(1, "", "")
+  }
+  escaped = false;
+}else if (escaped and doCapture == true) {
+  doCapture = false;
+  @capture(escapeCodes[currentChar])
+  escaped = false;
+}
+
+if (doCapture) {
+  @capture(currentChar)
+}
+
+>** '"' {string|export = $str;};
+
+string|String_Single = "'" str: <string{
+var bool escaped = false;
+var map escapeCodes = new map();
+escapeCodes["n"] = "\n";
+escapeCodes["b"] = "\b";
+escapeCodes["f"] = "\f";
+escapeCodes["r"] = "\r";
+escapeCodes["t"] = "\t";
+escapeCodes["v"] = "\v";
+escapeCodes["\\"] = "\\";
+}|
+
+var bool doCapture = true;
+
+if (currentChar == "\\") {if (escaped == false) {escaped = true; doCapture = false;}}
+
+if (currentChar == "'") {
+  if (escaped == false) {
+    doCapture = false;
+    @error(1, "", "")
+  }
+  escaped = false;
+}else if (escaped and doCapture == true) {
+  doCapture = false;
+  @capture(escapeCodes[currentChar])
+  escaped = false;
+}
+
+if (doCapture) {
+  @capture(currentChar)
+}
+
+>** "'" {string|export = $str;};

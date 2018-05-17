@@ -1,0 +1,157 @@
+class Carpeg.expressions.classCapture inherits Carpeg.expression {
+	bound public <<string>array>array ranges = empty;
+	bound public <string>array literals = new <string>array();
+	bound public bool inverted = false;
+	bound public map data = new map();
+	
+	fixed public <Carpeg.expressions.classCapture>function @construct(map data) {
+		this.baked = data;
+	}
+	
+	bound public override <string>function display() {
+		var <string>array things = new <string>array();
+		
+		for (var int i in this.ranges) {
+			var string start = this.ranges[i][0];
+			var string end = this.ranges[i][1];
+			things.push(start + "-" + end);
+		}
+
+		for (var int i in this.literals) {
+			var string char = this.literals[i];
+			things.push(char);
+		}
+
+		return things.join(", ");
+	}
+
+	bound public override <string>function generate() {
+		var string capture = "";
+		
+		var string elser = "else if";
+		if (this.context.checkerIndex == 0) {
+			elser = "if";
+		}
+		if (this.parentRule.checkerIndex == 0) {
+			this.context.next = 2;
+		}
+
+		var <string>array range = new <string>array();
+		var <object>array ranges = this.ranges;
+		for (var int i in ranges) {
+			var <string>array cRange = ranges[i];
+			var string my = cRange[0];
+			var string my2 = cRange[1];
+			
+			range.push("if (int.mid(currentCode, " + my.charCodeAt(0) + ", " + my2.charCodeAt(0) + ")) {passed" + this.context.checkerIndex + " = true;}");
+		}
+		
+		var <string>array literal = new <string>array();
+		for (var string j in this.literals) {
+			var string cast = this.literals[j];
+			var int code = cast.charCodeAt(0);
+			if (cast == "\\r")
+				code = 13; //Hack for strange carrige return issue.
+			literal.push("if (currentCode == " + code + ") {passed" + this.context.checkerIndex + " = true;}");
+		}
+
+		if (false) {
+			var <string>array out = [
+				elser, " (c == ", this.context.checkerIndex, ") {\n",
+				"	var bool passed", this.context.checkerIndex, " = false;\n",
+				"	for (var int rangeIndex in ranges", this.context.checkerIndex, ") {\n",
+				"		var <int>array currentRange = ranges", this.context.checkerIndex, "[rangeIndex];\nif (currentCode >= currentRange[0]) {if (currentCode <= currentRange[1]) {passed", this.context.checkerIndex, " = true;break;}}\n",
+				"	}\n",
+				"	if (passed", this.context.checkerIndex, " == false) {for (var int literalIndex in literals", this.context.checkerIndex, ") {\n",
+				"		var int currentLiteral = literals", this.context.checkerIndex, "[literalIndex];\nif (currentCode == currentLiteral) {passed", this.context.checkerIndex, " = true;break;}\n",
+				"	}}\n",
+				"	if (passed", this.context.checkerIndex, ") {\n",
+				"		", this.captureData("currentChar"), "\n",		
+				"		", this.callMove(), "\n",
+				"\n	}else{\n",
+				"		", this.callError("1", this.display(), "currentChar"), "\n",
+				"	}\n",
+				"}"
+			];
+		}
+
+		var string onPass = this.captureData("currentChar") + "\n" + this.callMove();
+		var string onError = this.callError("1", this.display(), "currentChar");
+		if (this.inverted) {
+			var string oldPass = onPass;
+			onPass = onError;
+			onError = oldPass;
+		}
+		var <string>array out = [
+			elser, " (c == ", this.context.checkerIndex, ") {\n",
+			"	var bool passed", this.context.checkerIndex, " = false;\n",
+			"	", literal.join("else "), "\n",
+			"	if (passed", this.context.checkerIndex, " == false) {\n",
+			"		", range.join("else "), "\n",
+			"	}\n",
+			"	if (passed", this.context.checkerIndex, ") {\n",
+			"		", onPass,
+			"		this.error.vested++;\n",
+			"\n	}else{\n",
+			"		", onError, "\n",
+			"	}\n",
+			"}"
+		];
+		
+		return out.join("");
+	}
+	
+	bound public override <void>function build() {
+		this.outputType = "string";
+		this.ranges = new <object>array();
+		this.inverted = this.baked["inverted"];
+		for (var string i in this.baked["parts"]) {
+			var primitive thing = this.baked["parts"][i];
+			
+			if (thing.typeAsString() == "string") {
+				var string cast = thing;
+				this.literals.push(cast);
+			}else{
+				var <string>array cast2 = thing;
+				this.ranges.push(cast2);
+			}
+		}
+
+		if (this.isLabeled and this.directLabel) {
+			this.doOwnCapture = true;
+		}
+		
+		if (false) {
+			var <string>array range = new <string>array();
+			var <object>array ranges = this.ranges;
+			for (var int i in ranges) {
+				var <string>array cRange = ranges[i];
+				var string my = cRange[0];
+				var string my2 = cRange[1];
+				
+				range.push("if (currentCode >= " + my.charCodeAt(0) + " and currentCode <= " + my2.charCodeAt(0) + ") {passed" + this.context.checkerIndex + " = true;}");
+			}
+			
+			var <string>array literal = new <string>array();
+			for (var string j in this.literals) {
+				var string cast = this.literals[j];
+				if (cast == "\\r")
+					cast = "\r"; //Hack for strange carrige return issue.
+
+				literal.push("if (currentCode == " + cast.charCodeAt(0) + ") {passed" + this.context.checkerIndex + " = true;}");
+			}
+			var string fullRange = "[" + range.join(", ") + "]";
+			var string fullLiteral = "[" + literal.join(", ") + "]";
+
+			if (range.length() == 0) {
+				fullRange = "new <string>array()";
+			}
+			if (literal.length() == 0) {
+				fullLiteral = "new <string>array()";
+			}
+			var <string>array init = ["	var <string>array ranges", this.context.checkerIndex, " = ", fullRange, ";\n",
+				"	var <string>array literals", this.context.checkerIndex, " = ", fullLiteral, ";\n"];
+			this.parentRule.initializers.push(init.join(""));
+		}
+	}
+}

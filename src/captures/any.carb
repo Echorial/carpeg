@@ -1,0 +1,44 @@
+class Carpeg.expressions.any inherits Carpeg.expression {
+	fixed public <Carpeg.expressions.any>function @construct(map data) {
+		this.baked = data;
+	}
+	
+	bound public override <string>function display() {
+		return "Anything";
+	}
+
+	bound public override <string>function generate() {
+		var string elser = "else if";
+		if (this.context.checkerIndex == 0) {
+			elser = "if";
+		}
+		if (this.parentRule.checkerIndex == 0) {
+			this.context.next = 2;
+		}
+
+		var <string>array out = new <string>array();
+		
+		out = [
+			elser, " (c == ", this.context.checkerIndex, ") {\n",
+			"	if (currentChar == \"\\u0001\") {\n",
+			"		", this.callError("1", this.display(), "currentChar"), "\n",
+			"	}else{\n",
+			"		", this.captureData("currentChar"), "\n",
+			"		", this.callMove(), "\n",
+			"		this.error.vested++;\n",
+			"	}",
+			"}"
+		];
+		
+		return out.join("");
+	}
+	
+	bound public override <void>function build() {
+		var map data = this.baked;
+		this.outputType = "string";
+
+		if (this.isLabeled and this.directLabel) {
+			this.doOwnCapture = true;
+		}
+	}
+}

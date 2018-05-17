@@ -1,0 +1,55 @@
+class Carpeg.expressions.not inherits Carpeg.expression {
+	bound public Carpeg.expression expression = empty;
+
+	fixed public <Carpeg.expressions.optional>function @construct(map data) {
+		this.baked = data;
+	}
+
+	bound public override <string>function display() {
+		return "Not " + this.expression.display();
+	}
+	
+	bound public override <string>function generate() {
+		return this.expression.generate();
+	}
+	
+	bound public override <void>function build() {
+		var map bakedData = this.baked;
+
+		this.expression = Carpeg.expression.make(bakedData["expression"]);
+		this.expression.apply(this);
+		
+		this.context.doOverError = true;
+		this.context.error = this;
+
+		this.expression.context = this.context;
+
+		this.expression.copy(this);
+		this.expression.directLabel = this.directLabel;
+
+		this.expression.doError = true;
+		this.expression.overError = this;
+
+		this.expression.captures.push(this);
+
+		this.expression.build();
+
+		this.outputType = this.expression.outputType;
+	}
+
+	bound public override <string>function resetDatas(bool already) {
+		return this.expression.resetDatas(already);
+	}
+
+	bound public override <string>function overCapture(Carpeg.expression exp, string data) {
+		return this.callError("1", this.display(), "currentChar");
+	}
+
+	bound public override <string>function error(Carpeg.expression exp, string code, string err, string char) {
+		var int ctx = this.expression.context.next;
+		if (this.parentRule.checkerIndex == 0) {
+			ctx = 2;
+		}
+		return this.callMove();
+	}
+}

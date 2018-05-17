@@ -1,0 +1,229 @@
+class Carpeg.expression inherits object {
+	bound public int captureTo = 0;
+	bound public int realCaptureTo = 0;
+
+	bound public string expressionType = "";
+
+	bound public <string>function display() {
+		return this.expressionType;
+	}
+
+	bound public <void>function copy(Carpeg.expression exp) {
+		this.parentLabel = exp.parentLabel;
+		this.directLabel = false;
+		this.isLabeled = exp.isLabeled;
+		this.doError = exp.doError;
+		this.overError = exp.overError;
+		this.doMove = exp.doMove;
+		this.overMove = exp.overMove;
+		this.captureTo = exp.captureTo;
+		this.dynamicCapture = exp.dynamicCapture;
+
+		for (var int i in exp.captures) {
+			this.captures.push(exp.captures[i]);
+		}
+
+		for (var int j in exp.initializers) {
+			this.initializers.push(exp.initializers[j]);
+		}
+	}
+
+	bound public bool isComplex = false;
+
+	bound public bool complexChild = false;
+	bound public Carpeg.expression thatComplexChild = empty;
+	bound public <void>function hasComplexChild(Carpeg.expression exp) {
+		this.complexChild = true;
+		this.thatComplexChild = exp;
+		if (this.isComplex == false) {
+			if (this.parentExpression !== empty) {
+				this.parentExpression.hasComplexChild(exp);
+			}
+		}
+	}
+
+	bound public <void>function updateChildren() {}
+
+	bound public bool dynamicCapture = false;
+
+	bound public <Carpeg.expression>array captures = new <Carpeg.expression>array();
+	bound public <Carpeg.expression>array initializers = new <Carpeg.expression>array();
+
+	bound public <string>function overCapture(Carpeg.expression exp, string data) {}
+	bound public <string>function overInitialize(Carpeg.expression exp) {}
+
+	bound public <string>function resetDatas(bool already) {return "";}
+
+	bound public bool doOwnCapture = false;
+	
+	bound public bool isLoose = false;
+
+	bound public string parentLabel = "";
+	bound public bool directLabel = false;
+	bound public bool isLabeled = false;
+
+	bound public bool doMove = false;
+	bound public Carpeg.expression overMove = empty;
+
+	bound public <void>function updateLoose() {
+		if (this.parentExpression !== empty) {
+			this.parentExpression.isLoose = this.isLoose;
+		}
+	}
+
+	bound public <string>function capturePlace() {
+		var string rtn = this.captureRoot();
+		if (this.isLabeled) {
+			rtn += "[\"" + this.parentLabel + "\"]";
+		}
+		return rtn;
+	}
+
+	bound public <string>function captureRoot() {
+		var string cap = "data";
+		if (this.captureTo > 0) {
+			cap = "captureRoot" + this.captureTo;
+		}
+		return cap;
+	}
+
+	bound public <string>function callParentCapture(string data) {
+		var string rtn = "";
+		for (var int i = this.captures.length() - 1; i > 0 - 1; i--) {
+			var Carpeg.expression capExp = this.captures[i];
+			rtn += capExp.overCapture(this, data);
+		}
+		return rtn;
+	}
+
+	bound public <string>function captureData(string data) {
+		var string cap = "data";
+		if (this.captureTo > 0) {
+			cap = "captureRoot" + this.captureTo;
+		}
+		var <string>array rtn = new <string>array();
+
+		if (this.doOwnCapture) {
+			rtn = [cap, "[\"", this.parentLabel, "\"] = ", data, ";"];
+		}
+
+		rtn.push(this.callParentCapture(data));
+
+		return rtn.join("");
+	}
+
+	bound public <string>function callMove() {
+		if (this.doMove) {
+			return this.overMove.move(this);
+		}else{
+			return this.parentRule.moveNext(this.context.next);
+		}
+	}
+
+	bound public bool doError = false;
+	bound public Carpeg.expression overError = empty;
+
+	bound public <string>function callError(string code, string expected, string found) {
+		if (this.doError) {
+			return this.overError.error(this, code, expected, found);
+		}else{
+			return "this.giveError(" + code + ", \"" + expected + "\", " + found + ");";
+		}
+	}
+
+	bound public string outputType = "";
+	
+	bound public Carpeg.context context = new Carpeg.context();
+	
+	bound public Carpeg.rule parentRule = empty;
+	bound public Carpeg.grammar grammar = empty;
+	
+	bound public bool hasParentExpression = false;
+	bound public Carpeg.expression parentExpression = empty;
+	bound public map baked = new map();
+	
+	bound public <string>function generate() {}
+	
+	bound public <void>function build() {}
+
+	bound public <string>function resetAllCaptureData() {}
+
+	bound public <string>function error(Carpeg.expression exp, string code, string err, string char) {}
+	
+	bound public <string>function move(Carpeg.expression exp) {}
+
+	bound public <string>function put(Carpeg.context ctx, string cap, string thing) {}
+
+	bound public <void>function apply(Carpeg.expression you) {
+		this.parentRule = you.parentRule;
+		this.grammar = you.grammar;
+		this.hasParentExpression = true;
+		this.parentExpression = you;
+	}
+	
+	fixed public <Carpeg.expression>function make(map data) {
+		var string type = data["type"];
+		var Carpeg.expression output = empty;
+		if (type == "sequence") {
+			output = new Carpeg.expressions.sequence(data);
+			output.expressionType = "sequence";
+		}else if (type == "group") {
+			output = new Carpeg.expressions.group(data);
+			output.expressionType = "group";
+		}else if (type == "choice") {
+			output = new Carpeg.expressions.choice(data);
+			output.expressionType = "choice";
+		}else if (type == "optional") {
+			output = new Carpeg.expressions.optional(data);
+			output.expressionType = "optional";
+		}else if (type == "simple_not") {
+			output = new Carpeg.expressions.not(data);
+			output.expressionType = "not";
+		}else if (type == "literal") {
+			output = new Carpeg.expressions.stringLiteral(data);
+			output.expressionType = "literal";
+		}else if (type == "rule_ref") {
+			output = new Carpeg.expressions.ruleRef(data);
+			output.expressionType = "ruleRef";
+		}else if (type == "class") {
+			output = new Carpeg.expressions.classCapture(data);
+			output.expressionType = "class";
+		}else if (type == "native") {
+			output = new Carpeg.expressions.native(data);
+			output.expressionType = "native";
+		}else if (type == "any") {
+			output = new Carpeg.expressions.any(data);
+			output.expressionType = "any";
+		}else if (type == "labeled") {
+			output = new Carpeg.expressions.labeled(data);
+			output.expressionType = "labeled";
+		}else if (type == "action") {
+			output = new Carpeg.expressions.action(data);
+			output.expressionType = "action";
+		}else if (type == "action") {
+			output = new Carpeg.expressions.action(data);
+			output.expressionType = "action";
+		}else if (type == "zero_or_more") {
+			output = new Carpeg.expressions.list(data);
+			output.expressionType = "zero_or_more";
+		}else if (type == "zero_or_more_raw") {
+			output = new Carpeg.expressions.list(data);
+			var Carpeg.expressions.list cast = output;
+			cast.raw = true;
+			output.expressionType = "zero_or_more";
+		}else if (type == "one_or_more") {
+			output = new Carpeg.expressions.list(data);
+			var Carpeg.expressions.list cast = output;
+			cast.min = 1;
+			output.expressionType = "one_or_more";
+		}else if (type == "one_or_more_raw") {
+			output = new Carpeg.expressions.list(data);
+			var Carpeg.expressions.list cast = output;
+			cast.min = 1;
+			cast.raw = true;
+			output.expressionType = "one_or_more";
+		}
+		
+		return output;
+	}
+}

@@ -1,0 +1,238 @@
+import WhiteSpace
+import String
+import Json
+
+map|start = parsed: Grammar;
+
+string|Comment = _ "//" [^\n]**;
+
+map|Grammar = imports: Importer* _ rules: Rule*  _
+{initializers: {new <string>array()}, imports: {$imports}, rules: {$rules}};
+
+map|Importer = "import" __ name: Safe_Name _
+{name: {$name}};
+
+string|Safe_Name = str: [A-Za-z0-9_]++
+{string|export = $str;};
+
+string|Type_Name = str: [A-Za-z0-9_><]++ {string|export = $str;};
+
+map|Rule = _ Comment* _ outputType: Type_Name _ "|" _ name: Safe_Name _ label: String? _ "=" _ exp: Expression _ ";" _ cap: Action_Block? _
+{map|export["name"] = $name;
+if ($label != empty) {
+    export["label"] = $label;
+}
+if ($cap != empty) {
+    export["cap"] = $cap;
+}
+
+export["output"] = $outputType;
+export["expression"] = $exp;
+};
+
+map|Expression = exp: (Group_Expression / Modify_Expression / Group / Simple_Expression)
+{map|export = $exp;};
+
+map|Sub_Expression = exp: (Modify_Expression / Group / Simple_Expression) {map|export = $exp;};
+
+//Group
+
+map|Group_Expression = _ exp: (Action / Sequence / Choice)
+{map|export = $exp;};
+
+string|Code = code: <string{var int brace = 0;}|
+if (currentChar == "}") {
+    if (brace == 0) {
+        @error(1, "", "")
+    }else{
+        @capture(currentChar)
+    }
+    brace--;
+}else{
+    if (currentChar == "{") {
+        brace++;
+    }
+    @capture(currentChar)
+}
+>** {string|export = $code;};
+
+map|Action_Block = "{" _ type: Type_Name _ "|" code: Code "}"
+{type: {$type}, code: {$code}, typeType: "coded"};
+
+string|Action_String = str: String {string|export = "\"" + $str + "\"";};
+
+map|Action_Part = _ name: [A-Za-z0-9]** _ ":" _ value: (Action_String / Code_Block / Action_Map)
+{name: {$name}, value: {$value}};
+
+map|Action_Map = "{" _ acts: Action_Part*|"," _ "}"
+{map|
+export["type"] = "map";
+export["code"] = new map();
+for (var int i in $acts) {
+    var map act = $acts[i];
+    export["code"][act["name"]] = act["value"];
+}
+export["typeType"] = "mapped";
+};
+
+string|Code_Block = "{" code: Code "}"
+{string|export = $code;};
+
+map|Action = _ exp: (Sequence / Choice / Sub_Expression) _ act: (Action_Block / Action_Map)
+{type: "action", code: {$act["code"]}, outputType: {$act["type"]}, typeType: {$act["typeType"]}, expression: {$exp}, location: {false}};
+
+map|Sub_Action = _ exp: Sub_Expression _ act: (Action_Block / Action_Map) _
+{type: "action", code: {$act["code"]}, outputType: {$act["type"]}, typeType: {$act["typeType"]}, expression: {$exp}, location: {false}};
+
+map|Group = _ "(" exp: Expression _ ")" _
+{map|
+var bool doAround = false;
+if ($exp["type"] == "labeled") {
+    doAround = true;
+}else if ($exp["type"] == "sequence") {
+    doAround = true;
+}
+if (doAround) {
+    export["type"] = "group";
+    export["expression"] = $exp;
+    export["location"] = false;
+}else{
+    export = $exp;
+}
+};
+
+map|Sequence = cont: (exp: (Sub_Action / Sub_Expression) exps: (Sub_Action / Sub_Expression)+);
+{map|export["type"] = "sequence";
+export["location"] = false;
+var <map>array exps = $cont["exps"];
+exps.unshift($cont["exp"]);
+export["elements"] = exps;}
+
+map|Choice = exps: (Sub_Action / Sub_Expression)+|"/" _;
+{map|export["type"] = "choice";
+export["location"] = false;
+if ($exps.length() < 2) {@error(1, "", "")}
+export["alternatives"] = $exps;}
+
+//Simple
+
+map|Simple_Expression = _ exp: (Any / Rule_Reference / String_Literal / Class / Native / Group) _
+{map|export = $exp;};
+
+map|String_Literal = string: String
+{type: "literal", value: {$string}, ignoreCase: {false}, location: {false}};
+
+map|Rule_Reference = rule: Safe_Name
+{type: "rule_ref", name: {$rule}, location: {false}};
+
+map|Class_Range = first: . "-" last: . {<string>array|if ($last == "]") {@error(1, "", "")}export = [$first, $last];};
+
+map|Class = "[" neg: "^"? r: (Class_Range / 
+<string{
+var bool escaped = false;
+var map escapeCodes = new map();
+escapeCodes["n"] = "\n";
+escapeCodes["b"] = "\b";
+escapeCodes["f"] = "\f";
+escapeCodes["r"] = "\r";
+escapeCodes["t"] = "\t";
+escapeCodes["v"] = "\v";
+escapeCodes["\\"] = "\\";
+}|
+
+var bool doCapture = true;
+
+if (currentChar == "\\") {if (escaped == false) {escaped = true; doCapture = false;}}
+
+if (escaped and doCapture) {
+  doCapture = false;
+  @capture(escapeCodes[currentChar])
+  escaped = false;
+}
+
+if (escaped == false) {
+if (currentChar == "]") {
+    @error(1, "", "")
+    doCapture = false;
+}
+}
+
+if (doCapture) {
+  @capture(currentChar)
+}
+
+>
+)* "]"
+{map|
+export["type"] = "class";
+export["parts"] = $r;
+export["inverted"] = false;
+if ($neg != empty) {
+    export["inverted"] = true;
+}
+export["location"] = false;};
+
+map|Any = "."
+{type: "any", location: {false}};
+
+map|Native = "<" _ type: Type_Name _ act: (Code_Block / _) _ "|" code: <string{var string endChar = ">";}|if (currentChar == endChar) {@error(1, "", "")}else{@capture(currentChar)}>** ">"
+{type: "native", outputType: {$type}, initializer: {$act}, code: {$code}};
+
+//Modify
+
+map|Modify_Expression = exp: (Labeled / Modify_Expression_Simple) {map|export = $exp;};
+
+//Pretty way is slow.
+
+map|Modify_Expression_Simple = _ beg: "!"? exp: (Simple_Expression) end: [+*?]++ _ vested: List_Vested? _ pipe: List_Pipe? _
+{map|
+var map ends = new map();
+ends["*"] = "zero_or_more";
+ends["**"] = "zero_or_more_raw";
+ends["+"] = "one_or_more";
+ends["++"] = "one_or_more_raw";
+ends["?"] = "optional";
+if ($beg != empty) {
+    export["type"] = "simple_not";
+}else{
+    export["type"] = ends[$end];
+}
+if ($pipe != empty) {
+    export["pipe"] = $pipe;
+}
+if ($vested != empty) {
+    export["vested"] = true;
+}else{
+	export["vested"] = false;
+}
+export["location"] = false;
+export["expression"] = $exp;};
+
+map|Labeled = _ label: Safe_Name _ ":" exp: Sub_Expression _
+{type: "labeled", label: {$label}, expression: {$exp}, location: {false}};
+
+map|List_Vested = "^" {map|export["vesting"] = 1;};
+
+map|List_Pipe = "|" _ pipe: (String_Literal / Rule_Reference)
+{map|export = $pipe;};
+
+map|List = l: (List_One_Raw / List_One / List_Zero_Raw / List_Zero)
+{map|export = $l;};
+
+map|List_Zero = exp: Simple_Expression "*"
+{type: "zero_or_more", expression: {$exp}, location: {false}};
+
+map|List_Zero_Raw = exp: Simple_Expression "**"
+{type: "zero_or_more_raw", expression: {$exp}, location: {false}};
+
+map|List_One = exp: Simple_Expression "+"
+{type: "one_or_more", expression: {$exp}, location: {false}};
+
+map|List_One_Raw = exp: Simple_Expression "++"
+{type: "one_or_more_raw", expression: {$exp}, location: {false}};
+
+map|Optional = exp: Simple_Expression "?"
+{type: "optional", expression: {$exp}, location: {false}};
+
+map|Not = "!" exp: Simple_Expression
+{type: "simple_not", expression: {$exp}, location: {false}};

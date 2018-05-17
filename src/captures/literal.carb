@@ -1,0 +1,77 @@
+class Carpeg.expressions.stringLiteral inherits Carpeg.expression {
+	bound public string literal = "";
+	
+	fixed public <Carpeg.expressions.stringLiteral>function @construct(map data) {
+		this.baked = data;
+	}
+	
+	bound public override <string>function display() {
+		var string disp = this.literal;
+		if (this.literal == "\"") {
+			disp = "\\\"";
+		}
+		return disp;
+	}
+
+	bound public override <string>function generate() {
+		var string elser = "else if";
+		if (this.context.checkerIndex == 0) {
+			elser = "if";
+		}
+		if (this.parentRule.checkerIndex == 0) {
+			this.context.next = 2;
+		}
+		var <int>array codes = new <int>array();
+		for (var int i in this.literal) {
+			codes.push(this.literal.charCodeAt(i));
+		}
+
+		var <string>array out = new <string>array();
+		
+		if (this.literal.length() > 1) {
+			out = [
+				elser, " (c == ", this.context.checkerIndex, ") {\n",
+				"	var <int>array lit", this.context.checkerIndex, " = [", codes.join(", "), "];\n",
+				"	if (currentCode == lit", this.context.checkerIndex, "[literalChar]) {\n",
+				"		literalChar++;\n",
+				"		if (literalChar == ", this.literal.length(), ") {\n",
+				"			", this.captureData("this.assembleCodes(lit" + this.context.checkerIndex + ")"), "\n",
+				"			", this.callMove(), "\n",
+				"			literalChar = 0;\n}\n",
+				"			this.error.vested++;\n",
+				"	}else{\n",
+				"		", this.callError("1", "\" + this.assembleCodes(lit" + this.context.checkerIndex + ") + \"", "currentChar"), "\n",
+				"	}\n",
+				"}"
+			];
+		}else{
+			var string disp = this.literal;
+			if (this.literal == "\"") {
+				disp = "\\\"";
+			}
+			out = [
+				elser, " (c == ", this.context.checkerIndex, ") {\n",
+				"	if (currentCode == ", codes[0], ") {\n",
+				"			", this.captureData("\"" + this.display() + "\""), "\n",
+				"			", this.callMove(), "\n",
+				"			this.error.vested++;\n",
+				"	}else{\n",
+				"		", this.callError("1", this.display(), "currentChar"), "\n",
+				"	}\n",
+				"}"
+			];
+		}
+		
+		return out.join("");
+	}
+	
+	bound public override <void>function build() {
+		var map data = this.baked;
+		this.outputType = "string";
+		this.literal = data["value"];
+
+		if (this.isLabeled and this.directLabel) {
+			this.doOwnCapture = true;
+		}
+	}
+}

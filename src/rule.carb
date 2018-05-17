@@ -1,0 +1,68 @@
+class Carpeg.rule inherits object {
+	bound public Carpeg.expression expression = empty;
+	
+	bound public Carpeg.grammar parent = empty;
+	
+	bound public bool initialized = false;
+	bound public string name = "";
+	bound public string label = "";
+	bound public bool labeled = false;
+	bound public string cap = "";
+
+	bound public string outputType = "";
+	
+	bound public int checkerIndex = 0;
+	bound public int captureIndex = 0;
+
+	bound public <string>array initializers = new <string>array();
+
+	bound public <string>function moveNext(int next) {
+		if (next > this.checkerIndex) {
+			return "c = 0 - 1;";
+		}else{
+			return "c = " + next + ";";
+		}
+	}
+
+	bound public <string>function display() {
+		if (this.labeled) {
+			return this.label;
+		}
+
+		return this.name;
+	}
+
+	bound public <string>function generate() {
+		var <string>array rtn = [
+			this.expression.generate()
+		];
+		
+		return rtn.join("\n");
+	}
+	
+	fixed public <Carpeg.rule>function @construct(map data, Carpeg.grammar parent) {
+		this.outputType = data["output"];
+		this.name = data["name"];
+		if ("cap" in data) {
+			this.cap = data["cap"]["code"];
+		}
+
+		if ("label" in data) {
+			this.label = data["label"];
+			this.labeled = true;
+		}
+
+		this.expression = Carpeg.expression.make(data["expression"]);
+		this.parent = parent;
+		
+		this.expression.context = new Carpeg.context();
+		this.expression.grammar = this.parent;
+		this.expression.hasParentExpression = false;
+		this.expression.parentRule = this;
+	}
+
+	bound public <void>function build() {
+		this.initialized = true;
+		this.expression.build();
+	}
+}

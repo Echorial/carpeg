@@ -1,0 +1,66 @@
+class Carpeg.expressions.ruleRef inherits Carpeg.expression {
+	bound public string rule = "";
+	
+	fixed public <Carpeg.expressions.ruleRef>function @construct(map data) {
+		this.baked = data;
+	}
+
+	bound public override <string>function display() {
+		var Carpeg.rule rule = this.grammar.getRule(this.rule);
+		return rule.display();
+	}
+
+	bound public override <string>function generate() {
+		var string elser = "else if";
+		if (this.context.checkerIndex == 0) {
+			elser = "if";
+		}
+		var string outputType = this.grammar.getRuleOutput(this.rule);
+		var Carpeg.rule rule = this.grammar.getRule(this.rule);
+		if (this.parentRule.checkerIndex == 0) {
+			this.context.next = 2;
+		}
+		var string vestedError = "";
+		var string outCast = "ruleOut" + this.context.checkerIndex;
+		var string upVest = "this.error.vested++;";
+		if (rule.expression.isLoose) {
+			upVest = "";
+		}
+		if (this.parentExpression.expressionType == "zero_or_more") {
+			vestedError = "if (" + outCast + ".error.vested > 1) {this.giveError(" + outCast + ".error.code, " + outCast + ".error.expected, " + outCast + ".error.found);}";
+		}
+		var <string>array out = [
+			elser, " (c == ", this.context.checkerIndex, ") {\n",
+			"	var <", outputType, ">", this.grammar.parserClass, "Output ruleOut", this.context.checkerIndex, " = this.", this.rule, "(input, charPos);\n",
+			"	\nif (ruleOut", this.context.checkerIndex, ".hadError) {\n",
+			"		", this.callError("ruleOut" + this.context.checkerIndex + ".error.code", rule.display() + "(\" + ruleOut" + this.context.checkerIndex + ".error.expected + \")", "ruleOut" + this.context.checkerIndex + ".error.found") + "\n",
+			"		", vestedError, "\n",
+			"	}else{\n",
+			"		var ", outputType, " ruleOutCast", this.context.checkerIndex, " = ruleOut", this.context.checkerIndex, ".data[\"data\"];\ncharPos = this.offset;\n",
+			"		", this.captureData("ruleOutCast" + this.context.checkerIndex), "\n",
+			"		", this.callMove(), "\n",
+			"		", upVest, "\n",
+			"	}\n",
+			"}"
+		];
+		
+		return out.join("");
+	}
+	
+	bound public override <void>function build() {
+		var map data = this.baked;
+		this.rule = data["name"];
+		this.outputType = this.grammar.getRuleOutput(this.rule);
+		var Carpeg.rule r = this.grammar.getRule(this.rule);
+		
+		if (r.expression.isLoose) {
+			if (this.parentExpression.expressionType == "sequence") {}else {
+				this.isLoose = true;
+				this.updateLoose();
+			}
+		}
+		if (this.isLabeled and this.directLabel) {
+			this.doOwnCapture = true;
+		}
+	}
+}

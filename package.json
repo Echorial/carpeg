@@ -1,0 +1,20 @@
+{
+	"name": "carpeg",
+	"version": "1.0.0",
+	"description": "Simple peg parser inspired by Peg.js",
+	"main": "dist/carpeg.js",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Echorial/carpeg.git"
+	},
+	"keywords": [
+		"peg",
+		"carbon"
+	],
+	"author": "Echorial",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/Echorial/carpeg/issues"
+	},
+	"homepage": "https://github.com/Echorial/carpeg#readme"
+}

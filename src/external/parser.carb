@@ -1,0 +1,11 @@
+relative nativeParser {
+	fixed native inline map doParse(string str) {return "CarpegNativeParser.parse(" + context.arguments[0] + ")";}
+}
+
+class Carpeg.parser {
+	fixed public <map>function parse(string content) {
+		var map out = nativeParser.doParse(content);
+		var map rtn = out["data"]["parsed"];
+		return rtn;
+	}
+}

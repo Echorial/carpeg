@@ -1,0 +1,11 @@
+platform = "javascript.source"
+
+output = $output
+
+entry = "carpeg.carb"
+
+type = "package"
+
+javascript.module = "Carpeg"
+
+autoCache = true

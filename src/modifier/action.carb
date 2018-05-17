@@ -1,0 +1,133 @@
+class Carpeg.expressions.action inherits Carpeg.expression {
+	bound public Carpeg.expression expression = empty;
+	bound public string code = "";
+	bound public string typeType = "";
+
+	fixed public <Carpeg.expressions.action>function @construct(map data) {
+		this.baked = data;
+	}
+	
+	bound public override <string>function generate() {
+		return this.expression.generate();
+	}
+	
+	bound public override <string>function display() {
+		return this.expression.display();
+	}
+
+	bound public override <string>function mapped(map data, string route) {
+		var string rtn = "";
+		for (var string key in data) {
+			var string type = data[key].typeAsString();
+			if (type == "string") {
+				var string cast = data[key];
+				rtn += "export" + route + "[\"" + key + "\"] = " + cast + ";\n";
+			}else if (type == "map") {
+				rtn += "export" + route + "[\"" + key + "\"] = new map();\n" + this.mapped(data[key], route + "[\"" + key + "\"]");
+			}
+		}
+		return rtn;
+	}
+
+	bound public override <void>function build() {
+		var map bakedData = this.baked;
+		
+		this.outputType = bakedData["outputType"];
+		this.typeType = bakedData["typeType"];
+		if ((this.typeType == "mapped") or (bakedData["code"].typeAsString() == "map")) {
+			this.code = this.mapped(bakedData["code"], "");
+		}else{
+			this.code = bakedData["code"];
+		}
+		
+		this.expression = Carpeg.expression.make(bakedData["expression"]);
+		this.expression.apply(this);
+
+		this.context.put = this;
+		this.context.doPut = true;
+
+		this.expression.context = this.context;
+
+		this.expression.copy(this);
+		this.expression.captures.push(this);
+		this.expression.build();
+		this.updateLoose();
+	}
+	
+	bound public override <string>function overCapture(Carpeg.expression exp, string data) {
+		if (this.complexChild) {
+			data = "captureRoot" + this.thatComplexChild.realCaptureTo;
+		}
+
+		var <string>array rtn = new <string>array();
+		var string cast = "castac" + exp.parentLabel + this.context.checkerIndex;
+		var capRoot = this.captureRoot();
+		var indexRoot = "[\"" + exp.parentLabel + "\"]";
+		
+		if (exp.parentLabel.length == 0)
+			indexRoot = "";
+		
+		rtn = ["\nvar ", this.expression.outputType, " ", cast, " = ", capRoot, indexRoot, ";\n"];
+		
+		var <string>array ref = this.code.match("[\\$]([A-Za-z_0-9]*)");
+		var map casters = new map();
+		if (ref != null)
+			for (var int i in ref) {
+				var string iRef = ref[i];
+				var string removed = iRef.substr(1, iRef.length() - 1);
+				var map cLab = this.context.childLabels;
+				if (removed in cLab) {
+					var Carpeg.expressions.labeled labelRef = cLab[removed];
+					var string oType = labelRef.outputType;
+					
+					casters[removed] = "var " + oType + " actionCap" + this.context.checkerIndex + removed + " = " + this.capturePlace() + "[\"" + removed + "\"];";
+				}else{
+					Exception.throw("No variable " + removed + " found.");
+				}
+			}
+			
+		var string casterCode = "";
+		
+		for (var string rem in casters) {
+			casterCode += casters[rem];
+		}
+		var string cCode = "";
+		
+		cCode = this.code.regularReplace("[\\$]([A-Za-z_0-9]*)", "actionCap" + this.context.checkerIndex + "$1");
+		cCode = cCode.regularReplace("[\\~]", this.capturePlace());
+		cCode = cCode.replace("export", "dataStore[\"data\"]");
+
+		cCode = cCode.regularReplace("[\\@](move)\\(\\)", this.callMove());
+		cCode = cCode.regularReplace("[\\@](capture)\\(\\s*([^)]*)\\s*\\)", this.captureData("$2"));
+		cCode = cCode.regularReplace("[\\@](error)\\(\\s*([0-9]*)\\s*,\\s*([^,]*)\\s*,\\s*([^)]*)\\s*\\)", this.callError("$2", "\" + $3 + \"", "$4"));
+
+		
+		rtn.push(casterCode + cCode);
+
+		return "if (true) {\n" + rtn.join("") + "}" + this.callParentCapture("");
+	}
+	
+	bound public override <string>function resetDatas(bool already) {
+			return this.expression.resetDatas(already);
+		if (this.complexChild) {
+			var int root = this.expression.captureTo;
+			var <string>array rtn = new <string>array();
+			if (this.dynamicCapture) {
+			}else{
+				rtn.push(this.capturePlace() + " = new map();\n");
+			}
+			var string create = "";
+			if (already == false) {
+				create = "var map ";
+			}
+			rtn.push(create + "captureRoot" + root + " = new map();\n" + this.expression.resetDatas(already));
+			return rtn.join("");
+		}else{
+			return this.expression.resetDatas(already);
+		}
+	}
+
+	bound public <string>function capture(string cap, string thing) {
+		return "";
+	}
+}

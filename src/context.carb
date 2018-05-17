@@ -1,0 +1,180 @@
+class Carpeg.context inherits object {
+	bound public int checkerIndex = 0;
+	bound public int next = 0;
+	
+	bound public Carpeg.context parent = empty;
+	bound public Carpeg.context parentCapture = empty;
+	
+	bound public Carpeg.expressions.action action = empty;
+	
+	bound public bool hasAction = false;
+	
+	bound public <Carpeg.expressions.labeled>map childLabels = new <Carpeg.expressions.labeled>map();
+	
+	bound public Carpeg.expression firstChild = empty;
+	bound public Carpeg.expression firstNonComplexChild = empty;
+
+	bound public bool customError = false;
+	bound public string errorString = "";
+	
+	bound public int captureTo = 0;
+	
+	bound public bool veryLast = false;
+	bound public bool putAfterLast = false;
+	
+	bound public bool isLabeled = false;
+	bound public string label = "";
+	
+	bound public bool extraCheck = false;
+	bound public string checkString = "";
+	
+	bound public bool doPut = false;
+	bound public Carpeg.expression put = empty;
+
+	bound public bool doMove = false;
+	bound public Carpeg.expression move = empty;
+
+	bound public bool doOverError = false;
+	bound public Carpeg.expression error = empty;
+
+	bound public bool moveBackOnFailure = false;
+	
+	bound public <string>function capturePut(string cap, string thing) {
+		var <string>array rtn = new <string>array();
+		if (this.doPut) {
+			return this.put.put(this, cap, thing);
+		}else{
+			rtn = [cap, "[\"", this.label, "\"] = ", thing, ";"];
+		}
+
+		return rtn.join("");
+	}
+
+	bound public <string>function doNext() {
+		if (this.doMove) {
+			//return this.move.move(this);
+		}else{
+			return "c = " + this.next + ";";
+		}
+	}
+	
+	bound public <string>function doError(int code, string errorString, string char) {
+		if (this.doOverError) {
+			//return this.error.error(this, code, errorString, char);
+		}else{
+			return "this.giveError(" + code + ", \"" + errorString + "\", " + char + ");";
+		}
+	}
+
+	bound public <string>function captureRoot() {
+		return "captureRoot" + this.captureTo;
+	}
+
+	bound public <string>function captureName() {
+		var <string>array rtn = new <string>array();
+		if (this.isLabeled) {
+			var string cap = "this.data";
+			if (this.captureTo > 0) {
+				cap = this.captureRoot();
+			}
+			if (this.hasAction and this.putAfterLast) {
+				rtn = [this.action.capture(cap + "[\"" + this.label + "\"]", "")];
+			}else{
+				rtn = [cap, "[\"", this.label, "\"]"];
+			}
+		}else{
+			
+		}
+		
+		return rtn.join("");
+	}
+	
+	bound public <string>function capture(string thing) {
+		var <string>array rtn = new <string>array();
+		if (this.isLabeled) {
+			var string cap = "this.data";
+			if (this.captureTo > 0) {
+				cap = "captureRoot" + this.captureTo;
+			}
+			if (this.hasAction and this.putAfterLast) {
+				rtn = [this.action.capture(cap + "[\"" + this.label + "\"", thing)];
+			}else{
+				rtn = [this.capturePut(cap, thing)];
+			}
+			/*
+			if (false and this.putAfterLast and this.parentCapture.isEmpty() == false) {
+				rtn.push(this.parentCapture.capture(cap));
+			}
+			*/
+		}else{
+			
+		}
+		
+		return rtn.join("");
+	}
+	
+	bound public <void>function copyOverrides(Carpeg.context from) {
+		this.doPut = from.doPut;
+		this.put = from.put;
+
+		this.doMove = from.doMove;
+		this.move = from.move;
+
+		this.doOverError = from.doOverError;
+		this.error = from.error;
+	}
+
+	bound public <void>function buildCapture(string type, Carpeg.expression you) {
+		you.grammar.captures.push(this.captureVar("new " + type + "()", type));
+	}
+	
+	bound public <int>function addCapture(Carpeg.expression you) {
+		you.parentRule.captureIndex++;
+		this.captureTo = you.parentRule.captureIndex;
+		
+		return you.parentRule.captureIndex;
+	}
+	
+	bound public <string>function captureVar(string thing, string type) {
+		var <string>array rtn = ["var ", type, " captureRoot", this.captureTo, " = ", thing, ";"];
+		return rtn.join("");
+	}
+	
+	bound public <string>function doSuccess() {
+		var <string>array rtn = new <string>array();
+		
+		if (this.putAfterLast) {
+			if (this.hasAction) {
+				rtn.push(this.action.capture("captureRoot" + this.captureTo + "[\"" + this.label + "\"]", ""));
+			}else{
+				if (this.parentCapture == null) {
+					this.capture("captureRoot" + this.captureTo);
+				}else{
+					rtn.push(this.parentCapture.capture("captureRoot" + this.captureTo));
+				}
+			}
+		}
+		
+		return rtn.join("\n");
+	}
+	
+	bound public override <void>function clone(Carpeg.context ctx) {
+		this.parent = ctx;
+		this.parentCapture = ctx.parentCapture;
+		this.checkerIndex = ctx.checkerIndex;
+		this.next = ctx.next;
+		
+		this.customError = ctx.customError;
+		this.errorString = ctx.errorString;
+		this.extraCheck = ctx.extraCheck;
+		this.checkString = ctx.checkString;
+		this.moveBackOnFailure = ctx.moveBackOnFailure;
+		this.captureTo = ctx.captureTo;
+		this.hasAction = ctx.hasAction;
+		this.action = ctx.action;
+	}
+
+	fixed public <Carpeg.context>function @construct() {
+		
+	}
+}

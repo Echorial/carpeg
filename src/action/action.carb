@@ -1,0 +1,77 @@
+class Carpeg.expressions.action inherits Carpeg.expression {
+	bound public Carpeg.expression expression = empty;
+	bound public string code = "";
+	bound public string output = "";
+	
+	bound public int subCapture = 0;
+	
+	fixed public <Carpeg.expressions.action>function @construct(map data) {
+		this.baked = data;
+	}
+	
+	bound public <string>function capture(string cap, string thing) {
+		var <string>array ref = this.code.match("[\\$]([A-Za-z_0-9]*)");
+		var map casters = new map();
+		for (var int i in ref) {
+			var string iRef = ref[i];
+			var string removed = iRef.substr(1, iRef.length() - 1);
+			var map cLab = this.context.childLabels;
+			if (removed in cLab) {
+				var Carpeg.expressions.labeled labelRef = cLab[removed];
+				var string oType = labelRef.outputType;
+				
+				casters[removed] = "var " + oType + " actionCap" + this.context.checkerIndex + removed + " = captureRoot" + this.subCapture + "[\"" + removed + "\"];";
+			}else{
+				Exception.throw("No variable " + removed + " found.");
+			}
+		}
+		
+		var string casterCode = "";
+		
+		for (var string rem in casters) {
+			casterCode += casters[rem];
+		}
+		
+		this.code = this.code.replace("[\\$]([A-Za-z_0-9]*)", "actionCap" + this.context.checkerIndex + "$1");
+		this.code = this.code.replace("[\\~]", this.context.captureName());
+		
+		
+		return "if (true) {\n" + casterCode + this.code + "\n}"; //Isolate scope
+	}
+	
+	bound public override <string>function generate() {
+		return this.expression.generate();
+	}
+	
+	bound public override <void>function build() {
+		this.code = this.baked["code"];
+		this.output = this.baked["outputType"];
+		this.outputType = this.output;
+		
+		var map data = this.baked["expression"];
+		this.expression = Carpeg.expression.make(data);
+		this.expression.apply(this);
+		this.expression.context = new Carpeg.context();
+		this.expression.context.clone(this.context);
+		
+		this.expression.context.childLabels = new map();
+		this.context.childLabels = this.expression.context.childLabels;
+		
+		this.expression.context.action = this;
+		this.expression.context.hasAction = true;
+		
+		this.expression.context.parent = this.context;
+		
+		this.expression.context.parentCapture = this.context;
+		this.expression.context.checkerIndex = this.context.checkerIndex;
+		this.expression.context.next = this.context.next;
+		
+		this.expression.context.putAfterLast = true;
+		
+		var int prev = this.expression.context.addCapture(this);
+		this.subCapture = prev;
+		
+		this.expression.build();
+		this.expression.context.buildCapture(this.expression.outputType, this);
+	}
+}

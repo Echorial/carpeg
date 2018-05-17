@@ -1,0 +1,279 @@
+class Carpeg.grammar inherits object {
+	bound public string source = "";
+	
+	bound public map baked = new map();
+	
+	bound public <Carpeg.rule>array rules = new <Carpeg.rule>array();
+
+	bound public <Carpeg.import>array imports = new <Carpeg.import>array();
+	
+	bound public <string>array captures = new <string>array();
+	
+	bound public string parserClass = "CarpegParser";
+	
+	bound public int checkerIndex = 0;
+	
+	bound public int captureIndex = 0;
+
+	bound public <string>function generate() {
+		var <string>array ruleOutput = new <string>array();
+		
+		var <Carpeg.rule>array rules = this.rules;
+		
+		var Carpeg.rule startRule = empty;
+
+		var string initializer = "";
+		var <string>array ruleChecks = new <string>array();
+		for (var int i in rules) {
+			var Carpeg.rule rule = rules[i];
+			if (rule.name != "start")
+				ruleChecks.push("if (rule == \"" + rule.name + "\") {\n	output = parser." + rule.name + "(input, 0);\n	}");
+			if (rule.name == "start") {
+				initializer = rule.expression.resetDatas(false);
+				ruleOutput.push(rule.generate());
+				startRule = rule;
+			}
+		}
+
+		var string outputType = this.getRuleOutput("start");
+		
+		var <string>array output = [
+			"class ", this.parserClass, "Location {\n",
+				"bound public int offset = 0;\n",
+				"bound public int line = 1;\n",
+				"bound public int column = 0;\n",
+				"fixed public <", this.parserClass, "Location>function @construct(int offset, int line, int column) {\n",
+					"this.offset = offset; this.line = line; this.column = column;\n",
+				"}\n",
+			"}\n\n",
+			"class ", this.parserClass, "Error inherits ", this.parserClass, "Location {\n",
+				"bound public int code = 0;\n",
+				"bound public string found = 0;\n",
+				"bound public string expected = 0;\n",
+				"bound public int vested = 0;\n",
+				"bound public <", this.parserClass, "Error>array path = new <", this.parserClass, "Error>array();\n",
+				"bound public <", this.parserClass, "Error>function clone() {var ", this.parserClass, "Error clone = new ", this.parserClass, "Error(this.offset, this.line, this.column); clone.code = this.code; clone.found = this.found; clone.expected = this.expected; clone.vested = this.vested; for (var int i in this.path) {var ", this.parserClass, "Error current = this.path[i]; clone.path.push(current.clone());} return clone;}",
+			"}\n\n",
+			"class <class T>", this.parserClass, "Output {\n",
+			"	fixed public <<T>", this.parserClass, "Output>function @construct(bool hadError, ", this.parserClass, "Error error, map data) {this.hadError = hadError; this.error = error; this.data = data;}\n",
+			"	bound public ", this.parserClass, "Error error = empty;\n",
+			"	bound public bool hadError = false;\n",
+			"	bound public map data = new map();\n",
+			"}\n",
+			"class ", this.parserClass, " inherits ", this.parserClass, "Location {\n",
+				"fixed public override <", this.parserClass, ">function @construct() {}\n",
+				"fixed public <<", outputType, ">", this.parserClass, "Output>function parse(string input) {",
+				"	var <", outputType, ">", this.parserClass, " parser = new <", outputType, ">", this.parserClass, "();\n",
+				"	var ", outputType, " output = parser.start(input);\n",
+				"	if (parser.hadError and (parser.error.found == string.fromCharCode(0001))) {\n",
+				"		parser.error.found = \"End of input\";\n",
+				"}\n",
+				"	var <", outputType, ">", this.parserClass, "Output rtn = new <", outputType, ">", this.parserClass, "Output(parser.hadError, parser.error, parser.data[\"data\"]);\n",
+				"	return rtn;\n",
+				"}\n",
+				"fixed public <<", outputType, ">", this.parserClass, "Output>function parse(string rule, string input) {",
+				"	var <", outputType, ">", this.parserClass, " parser = new <", outputType, ">", this.parserClass, "();\n",
+				"	input += string.fromCharCode(0001);\n",
+				"	parser.currentInput = input;\n",
+				"	parser.data[\"data\"] = new ", outputType, "();\n",
+				"	var <", outputType, ">", this.parserClass, "Output output = null;\n",
+				"	", ruleChecks.join("else"),
+				"\n	if (parser.hadError and (parser.error.found == string.fromCharCode(0001))) {\n",
+				"		parser.error.found = \"End of input\";\n",
+				"	}\n",
+				"	for (var int i = 0; i < parser.error.offset; i++) {\n",
+				"		parser.error.column++;\n",
+				"		if (i < parser.currentInput.length)",
+				"		if (parser.currentInput[i] == \"\\n\") {parser.error.line++; parser.error.column = 0;}\n",
+				"	}\n",
+				"	var <", outputType, ">", this.parserClass, "Output rtn = new <", outputType, ">", this.parserClass, "Output(output.hadError, output.error, output.data);\n",
+				"	return rtn;\n",
+				"}\n",
+				"bound public <", this.parserClass, "Error>array lastErrors = new <", this.parserClass, "Error>array();\n",
+				"bound public bool hadError = false;\n",
+				"bound public int parsedChars = 0;\n",
+				"bound public string currentInput = new string();\n",
+				"bound public map data = new map();\n",
+				"bound public ", this.parserClass, "Error error = new ", this.parserClass, "Error(0, 0, 0);\n",
+				"bound public <string>function assembleCodes(<int>array codes) {\n",
+				"	var string rtn = new string();\n",
+				"	for (var int i in codes) {\n",
+				"		rtn += string.fromCharCode(codes[i]);\n",
+				"	}\n",
+				"	return rtn;",
+				"}\n",
+				"bound public <void>function giveError(int code, string expected, string found) {\n",
+					"this.hadError = true;\n",
+					"this.error.code = code;\n",
+					"this.error.expected = expected;\n",
+					"this.error.found = found;\n",
+					"this.error.offset = this.offset;\n",
+					"this.error.line = 1;\n",
+					"this.error.column = 0;\n",
+				"}\n\n",
+				"bound public <void>function start(string input) {\n", //", outputType, "
+				"	this.currentInput = input;\n",
+				"	input += string.fromCharCode(0001);",
+				"	this.data[\"data\"] = new ", outputType, "();\n",
+				"	var ", outputType, " data = this.data[\"data\"];\n",
+				"	var int c = 0;\n",
+				"	", initializer, "\n",
+				"	", this.captures.join("\n"),
+				"	", startRule.initializers.join(""),
+				"	var int literalChar = 0;\n",
+				"	for (var int charPos = 0; charPos < input.length(); charPos++) {\n",
+				"		var string currentChar = input[charPos];\n",
+				"		var int currentCode = input.charCodeAt(charPos);\n",
+				"		if (c == 0 - 1) {if (currentChar != string.fromCharCode(0001)) {this.giveError(2, \"EOF\", currentChar);}}\n",
+				"		if (currentCode == 10) {this.line++; this.column = 0;}\n",
+				"		", ruleOutput.join("\n\n"),
+				"		this.offset++; \n this.column++;\n",
+				"		if (this.hadError) {break;}\n",
+				"	}\n",
+				"	for (var int i = 0; i < this.error.offset; i++) {\n",
+				"		this.error.column++;\n",
+				"		if (i < this.currentInput.length)",
+				"		if (this.currentInput[i] == \"\\n\") {this.error.line++; this.error.column = 0;}\n",
+				"	}\n",
+				"	if (false and this.hadError == false) {\n",
+				"		if (this.offset < input.length() - 1) {\n",
+				"			this.giveError(2, \"EOF\", input[this.offset + 1]);",
+				"		}\n",
+				"	}\n",
+				"}\n",
+				this.doOtherRules(),
+			"}"
+		];
+		
+		return output.join("");
+	}
+
+	bound public <string>function doGenerateRule(Carpeg.rule rule) {
+		var string endCode = "";
+		if (rule.cap.length() != 0) {
+			var <string>array rtn = new <string>array();
+			var string cast = "castacend";
+			
+			var <string>array ref = rule.cap.match("[\\$]([A-Za-z_0-9]*)");
+			var map casters = new map();
+			for (var int i in ref) {
+				var string iRef = ref[i];
+				var string removed = iRef.substr(1, iRef.length() - 1);
+				var map cLab = rule.expression.context.childLabels;
+				if (removed in cLab) {
+					var Carpeg.expressions.labeled labelRef = cLab[removed];
+					var string oType = labelRef.outputType;
+					
+					casters[removed] = "var " + oType + " actionCapend" + removed + " = data[\"" + removed + "\"];";
+				}else{
+					Exception.throw("No variable " + removed + " found.");
+				}
+			}
+			
+			var string casterCode = "";
+			
+			for (var string rem in casters) {
+				casterCode += casters[rem];
+			}
+			var string cCode = "";
+			cCode = rule.cap.replace("[\\$]([A-Za-z_0-9]*)", "actionCapend$1");
+			cCode = cCode.replace("export", "dataStore[\"data\"]");
+
+			cCode = cCode.replace("[\\@](move)\\(\\)", rule.expression.callMove());
+			cCode = cCode.replace("[\\@](error)\\(\\s*([0-9]*)\\s*,\\s*([^,]*)\\s*,\\s*([^)]*)\\s*\\)", rule.expression.callError("$2", "\" + $3 + \"", "$4"));
+
+			rtn.push(casterCode + cCode);
+
+			endCode = rtn.join("");
+		}
+
+		var <string>array rtn = new <string>array();
+		rtn = ["bound public <<", rule.outputType, ">", this.parserClass, "Output>function ", rule.name, "(string input, int startPos) {var int oldVest = this.error.vested;\n",
+		"	var map dataStore = new map();\ndataStore[\"data\"] = new ", rule.outputType, "();\ndataStore[\"temp\"] = new map();\n",
+		"	var ", rule.outputType, " data = dataStore[\"temp\"];\n",
+		"	var int c = 0;\n",
+		"	", rule.expression.resetDatas(false), "\n",
+		"	", this.captures.join("\n"),
+		"	", rule.initializers.join(""),
+		"	var int literalChar = 0;\n",
+		"	for (var int charPos = startPos; charPos < input.length(); charPos++) {\n",
+		"		var string currentChar = input[charPos];\n",
+		"		var int currentCode = input.charCodeAt(charPos);\n",
+		"		if (currentCode == 10) {this.line++; this.column = 0;}\n",
+		"		", rule.generate(),
+		"		this.offset++; this.column++;\n",
+		"		if (c == 0 - 1) {", endCode, "this.offset = charPos; break;}\n",
+		"		if (this.hadError) {break;}\n",
+		"	}\n",
+		"	var <", rule.outputType, ">", this.parserClass, "Output parseOutput = new <", rule.outputType, ">", this.parserClass, "Output(this.hadError, this.error.clone(), dataStore);\n",
+		"	parseOutput.error.vested = this.error.vested - oldVest; this.error.vested = oldVest;",
+		"	this.hadError = false;\n",
+		"	return parseOutput;\n",
+		"}\n"];
+		return rtn.join("");
+	}
+
+	bound public <string>function doOtherRules() {
+		var <string>array rtn = new <string>array();
+		for (var int i in this.rules) {
+			var Carpeg.rule rule = this.rules[i];
+			if (rule.name != "start") {
+				rtn.push(this.doGenerateRule(rule));
+			}
+		}
+		return rtn.join("");
+	}
+
+	bound public <string>function getRuleOutput(string name) {
+		for (var int i in this.rules) {
+			var Carpeg.rule rule = this.rules[i];
+			if (rule.name == name) {
+				return rule.outputType;
+			}
+		}
+		return "empty";
+	}
+
+	bound public <Carpeg.rule>function getRule(string name) {
+		for (var int i in this.rules) {
+			var Carpeg.rule rule = this.rules[i];
+			if (rule.name == name) {
+				return rule;
+			}
+		}
+	}
+
+	fixed public <Carpeg.grammar>function @construct(string input) {
+		this.source = input;
+		this.baked = Carpeg.parser.parse(input);
+		
+		var map baked = this.baked;
+		var <map>array rules = baked["rules"];
+		var <map>array imports = baked["imports"];
+		
+		for (var int i in imports) {
+			var map importa = imports[i];
+			
+			this.imports.push(new Carpeg.import.make(importa["name"], importa));
+		}
+
+		for (var int i in this.imports) {
+			var Carpeg.import importa = this.imports[i];
+			var map data = Carpeg.parser.parse(importa.output());
+			for (var string key in data["rules"]) {
+				rules.push(data["rules"][key]);
+			}
+		}
+
+		for (var int i in rules) {
+			var map rule = rules[i];
+			
+			this.rules.push(new Carpeg.rule(rule, this));
+		}
+
+		for (var int i in this.rules) {
+			var Carpeg.rule rule = this.rules[i];
+			rule.build();
+		}
+	}
+}

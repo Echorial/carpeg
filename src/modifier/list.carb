@@ -1,0 +1,177 @@
+class Carpeg.expressions.list inherits Carpeg.expression {
+	bound public Carpeg.expression expression = empty;
+	bound public bool piped = false;
+	bound public Carpeg.expression pipeExpression = empty;
+
+	bound public bool vested = true;
+	bound public bool raw = false;
+	bound public int min = 0;
+
+	fixed public <Carpeg.expressions.list>function @construct(map data) {
+		this.baked = data;
+	}
+
+	bound public override <string>function display() {
+		return this.expression.display();
+	}
+	
+	bound public override <string>function generate() {
+		return this.expression.generate();
+	}
+	
+	bound public override <void>function build() {
+		var map bakedData = this.baked;
+		
+		this.isLoose = true;
+		this.updateLoose();
+
+		if ("pipe" in bakedData) {
+			this.piped = true;
+			this.pipeExpression = Carpeg.expression.make(bakedData["pipe"]);
+			this.pipeExpression.apply(this);
+			this.pipeExpression.isLabeled = false;
+			this.pipeExpression.build();
+		}
+
+		this.expression = Carpeg.expression.make(bakedData["expression"]);
+		this.expression.apply(this);
+
+		this.context.doMove = true;
+		this.context.move = this;
+
+		this.context.doOverError = true;
+		this.context.error = this;
+		
+		this.context.put = this;
+		this.context.doPut = true;
+
+		this.expression.context = this.context;
+
+		this.expression.copy(this);
+		
+		this.expression.dynamicCapture = true;
+
+		this.expression.doError = true;
+		this.expression.overError = this;
+
+		this.expression.doMove = true;
+		this.expression.overMove = this;
+
+		this.expression.captures.push(this);
+		this.expression.initializers.push(this);
+
+		this.expression.build();
+
+		if ((this.expression.context.firstNonComplexChild !== empty) and (this.expression.expressionType != "choice")) {
+			this.expression.context.firstNonComplexChild.doError = true;
+			this.expression.context.firstNonComplexChild.overError = this;
+			this.expression.context.firstNonComplexChild.updateChildren();
+		}
+
+		if (this.raw) {
+			this.outputType = "string";
+		}else{
+			this.outputType = "<" + this.expression.outputType + ">array";
+		}
+	}
+
+	bound public override <string>function overCapture(Carpeg.expression exp, string data) {
+		if (this.complexChild) {
+			data = "captureRoot" + this.thatComplexChild.realCaptureTo;
+		}
+		var <string>array rtn = new <string>array();
+		if (this.isLabeled and this.directLabel) {
+			var string cast = "cast" + this.parentLabel + this.context.checkerIndex;
+			if (this.raw) {
+				rtn = [this.captureRoot(), "[\"", this.parentLabel, "\"] += ", data, ";\n"];
+			}else{
+				rtn = ["var <", this.expression.outputType, ">array ", cast, " = ", this.captureRoot(), "[\"", this.parentLabel, "\"];\n", cast, ".push(", data, ");\n"];
+			}
+			if (this.piped) {
+				if (this.pipeExpression.expressionType == "literal") {
+					var Carpeg.expressions.stringLiteral expCast = this.pipeExpression;
+					var int ctx = this.expression.context.next;
+					if (this.parentRule.checkerIndex == 0) {
+						ctx = 2;
+					}
+					rtn.push("if (input.charCodeAt(charPos + 1) != " + expCast.literal.charCodeAt(0) + ") {\n" + this.callParentCapture("") + this.parentRule.moveNext(ctx) + "continue;}else {charPos++;}");
+				}
+			}
+			if (this.parentRule.checkerIndex > 0) {
+				if (this.context.checkerIndex < this.parentRule.checkerIndex - 1) {
+					rtn.push("if (charPos == input.length() - 1) {this.giveError(2, \"EOF\", currentChar);}\n");
+				}
+			}
+			if (this.complexChild) {
+				rtn.push(this.thatComplexChild.resetDatas(true));
+			}
+		}
+		return rtn.join("");
+	}
+	
+	bound public override <string>function resetDatas(bool already) {
+		return this.capturePlace() + " = new " + this.outputType + "();\n" + this.expression.resetDatas(already);
+	}
+
+	bound public override <string>function overInitialize(Carpeg.expression exp) {
+		return "var <" + this.outputType + ">array = new <" + this.outputType + ">array();";
+	}
+
+	bound public override <string>function error(Carpeg.expression exp, string code, string err, string char) {
+		var int ctx = this.expression.context.next;
+		if (this.parentRule.checkerIndex == 0) {
+			ctx = 2;
+		}
+		var string move = this.callParentCapture("") + this.parentRule.moveNext(ctx) + " charPos--; this.offset--;";
+		
+		if (this.min > 0) {
+			var string cast = "cast" + this.parentLabel + this.context.checkerIndex;
+			var string castType = "<" + this.expression.outputType + ">array";
+			if (this.raw) {
+				castType = "string";
+			}
+			var string val = "var " + castType + " " + cast + " = " + this.captureRoot() + "[\"" + this.parentLabel + "\"];\n";
+
+			var <string>array rtn = [val, "if (", cast, ".length() >= ", this.min, ") {\n", move, "}else{\nthis.giveError(1, \"", this.expression.display(), "\", currentChar);}\n"];
+
+			return rtn.join("");
+		}else{
+			return move;
+		}
+	}
+
+	bound public override <string>function move(Carpeg.expression exp) {
+		var int next = exp.context.next;
+		if (this.expression.context.firstChild !== empty) {
+			next = this.expression.context.firstChild.context.checkerIndex;
+		}else{
+			if (next > this.parentRule.checkerIndex) {
+				next = 0;
+			}
+		}
+		return this.parentRule.moveNext(next);
+	}
+
+	bound public override <string>function resetAllCaptureData() {
+		return this.context.captureName() + " =  new <" + this.expression.outputType + ">array();";
+	}
+
+	bound public override <string>function put(Carpeg.context ctx, string cap, string thing) {
+		var <string>array rtn = new <string>array();
+		var beg = this.context.firstChild.context.checkerIndex;
+		var string uniq = "cast" + ctx.label + ctx.checkerIndex;
+		ctx.doPut = false;
+		rtn = [
+			"if (\"", this.context.label, "\" notIn ", this.context.captureRoot(), ") {\n",
+			"	", this.context.captureRoot(), "[\"", this.context.label, "\"] = new <", this.expression.outputType, ">array();\n",
+			"}\n",
+			ctx.capture(thing), "\n",
+			"var <", this.expression.outputType, ">array ", uniq, " = ", this.context.captureRoot(), "[\"", this.context.label, "\"];\n",
+			uniq, ".push(object.clone(", ctx.captureRoot(), "));\n",
+			this.parentRule.moveNext(beg),
+			this.expression.resetAllCaptureData()
+		];
+
+		return rtn.join("");
+	}
+}

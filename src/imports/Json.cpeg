@@ -1,0 +1,24 @@
+map|Json = "{" _ keys: ( _ key: String _ ":" _ val: Json_Value _)*|"," _ "}" {map|
+for (var int i in $keys) {
+    var map k = $keys[i];
+    var string key = k["key"];
+    export[key] = k["val"];
+}};
+
+map|Json_Array = "[" _ vals: Json_Value*|"," _ "]" {map|export = $vals;};
+
+<map>array|Json_EmptyArray = "[" _ "]" {<map>array|~ = new <map>array();};
+
+map|Json_EmptyMap = "{" _ "}" {map|~ = new map();};
+
+int|Json_Value = _ exp: (("null" {empty|~ = empty;})
+/ ("true" {bool|~ = true;})
+/ ("false" {bool|~ = false;})
+/ Json_EmptyArray
+/ Json_EmptyMap
+/ Json_Array
+/ Json
+/ String
+/ Json_Number) _ {int|export = $exp;};
+
+int|Json_Number = nums: [0-9-.]++ {int|export = string.parseInt($nums);};
