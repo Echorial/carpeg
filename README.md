@@ -7,6 +7,9 @@
 
 A simple parser generator inspired by [Peg.js](https://girhub.com/pegjs/pegjs)
 
+# Demo
+[Online editor](https://www.echorial.com/carpeg/editor/)
+
 # Tutorial
 
 ## Installation
