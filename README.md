@@ -5,7 +5,7 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/Echorial/carpeg.svg?style=flat-square)
 ![license](https://img.shields.io/github/license/Echorial/carpeg.svg?style=flat-square)
 
-A simple parser generator inspired by [Peg.js](https://girhub.com/pegjs/pegjs)
+A simple parser generator inspired by [Peg.js](https://github.com/pegjs/pegjs)
 
 # Demo
 [Online editor](https://www.echorial.com/carpeg/editor/)
