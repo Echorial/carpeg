@@ -48,6 +48,7 @@ class Carpeg.expressions.sequence inherits Carpeg.expression {
 			var Carpeg.expression out = Carpeg.expression.make(data);
 			out.apply(this);
 			out.context = new Carpeg.context();
+			out.depth = this.depth + 1;
 			
 			out.context.hasAction = this.context.hasAction;
 			out.context.action = this.context.action;

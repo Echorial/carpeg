@@ -27,10 +27,11 @@ class Carpeg.expressions.ruleRef inherits Carpeg.expression {
 			upVest = "";
 		}
 		if (this.parentExpression.expressionType == "zero_or_more") {
-			vestedError = "if (" + outCast + ".error.vested > 1) {this.giveError(" + outCast + ".error.code, " + outCast + ".error.expected, " + outCast + ".error.found);}";
+			vestedError = "if (" + outCast + ".error.vested > 1) {this.giveError(" + outCast + ".error.code, " + outCast + ".error.expected, " + outCast + ".error.found); Exception.throw('Vested error');}";
 		}
 		var <string>array out = [
 			elser, " (c == ", this.context.checkerIndex, ") {\n",
+			"	this.depth++; ", this.callInject(),
 			"	var <", outputType, ">", this.grammar.parserClass, "Output ruleOut", this.context.checkerIndex, " = this.", this.rule, "(input, charPos);\n",
 			"	\nif (ruleOut", this.context.checkerIndex, ".hadError) {\n",
 			"		", this.callError("ruleOut" + this.context.checkerIndex + ".error.code", rule.display() + "(\" + ruleOut" + this.context.checkerIndex + ".error.expected + \")", "ruleOut" + this.context.checkerIndex + ".error.found") + "\n",
@@ -40,7 +41,7 @@ class Carpeg.expressions.ruleRef inherits Carpeg.expression {
 			"		", this.captureData("ruleOutCast" + this.context.checkerIndex), "\n",
 			"		", this.callMove(), "\n",
 			"		", upVest, "\n",
-			"	}\n",
+			"	}\n this.depth--;",
 			"}"
 		];
 		

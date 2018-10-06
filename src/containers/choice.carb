@@ -29,7 +29,7 @@ class Carpeg.expressions.choice inherits Carpeg.expression {
 	}
 	
 	bound public override <string>function move(Carpeg.expression exp) {
-		return this.parentRule.moveNext(this.context.next);
+		return "this.depth--;" + this.parentRule.moveNext(this.context.next);
 	}
 
 	bound public override <string>function error(Carpeg.expression exp, string code, string err, string char) {
@@ -39,10 +39,14 @@ class Carpeg.expressions.choice inherits Carpeg.expression {
 		}
 
 		if (exp.context.checkerIndex == this.last) {
-			return this.callError("1", this.display(), "currentChar");
+			return "this.depth--; " + this.callError("1", this.display(), "currentChar");
 		}else{
-			return this.parentRule.moveNext(ctx) + " charPos--; this.offset--;";
+			return "this.depth--; " + this.parentRule.moveNext(ctx) + " charPos--; this.offset--;";
 		}
+	}
+
+	bound public override <string>function inject(Carpeg.expression exp) {
+		return "this.groupErrors(); this.depth++;\n";
 	}
 
 	bound public override <void>function build() {
@@ -60,6 +64,8 @@ class Carpeg.expressions.choice inherits Carpeg.expression {
 			
 			out.context.childLabels = this.context.childLabels;
 			out.context.clone(this.context);
+
+			out.depth = this.depth + 1;
 			
 			var string subType = data["type"];
 			
@@ -79,6 +85,8 @@ class Carpeg.expressions.choice inherits Carpeg.expression {
 			}
 
 			var string conv = i;
+			out.doInject = true;
+			out.overInject = this;
 			if (int.parse(conv) != expressions.length() - 1) {
 				out.doError = true;
 				out.overError = this;

@@ -20,6 +20,7 @@ class Carpeg.expressions.any inherits Carpeg.expression {
 		
 		out = [
 			elser, " (c == ", this.context.checkerIndex, ") {\n",
+			"	", this.callInject(),
 			"	if (currentChar == \"\\u0001\") {\n",
 			"		", this.callError("1", this.display(), "currentChar"), "\n",
 			"	}else{\n",

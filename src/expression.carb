@@ -2,6 +2,8 @@ class Carpeg.expression inherits object {
 	bound public int captureTo = 0;
 	bound public int realCaptureTo = 0;
 
+	bound public int depth = 0;
+
 	bound public string expressionType = "";
 
 	bound public <string>function display() {
@@ -14,6 +16,7 @@ class Carpeg.expression inherits object {
 		this.isLabeled = exp.isLabeled;
 		this.doError = exp.doError;
 		this.overError = exp.overError;
+		this.overInject = null;
 		this.doMove = exp.doMove;
 		this.overMove = exp.overMove;
 		this.captureTo = exp.captureTo;
@@ -61,6 +64,9 @@ class Carpeg.expression inherits object {
 	bound public string parentLabel = "";
 	bound public bool directLabel = false;
 	bound public bool isLabeled = false;
+
+	bound public bool doInject = false;
+	bound public Carpeg.expression overInject = empty;
 
 	bound public bool doMove = false;
 	bound public Carpeg.expression overMove = empty;
@@ -123,11 +129,23 @@ class Carpeg.expression inherits object {
 	bound public bool doError = false;
 	bound public Carpeg.expression overError = empty;
 
+	bound public <string>function escapeExpected(string ex) {
+		return ex.replace("\n", "New line").replace("\r", "\\r").replace("\t", "\\t");
+	}
+
+	bound public <string>function callInject() {
+		if (this.doInject) {
+			return this.overInject.inject(this);
+		}else{
+			return "";
+		}
+	}
+
 	bound public <string>function callError(string code, string expected, string found) {
 		if (this.doError) {
-			return this.overError.error(this, code, expected, found);
+			return this.overError.error(this, code, this.escapeExpected(expected), found);
 		}else{
-			return "this.giveError(" + code + ", \"" + expected + "\", " + found + ");";
+			return "this.giveError(" + code + ", \"" + this.escapeExpected(expected) + "\", " + found + ");";
 		}
 	}
 
@@ -151,6 +169,8 @@ class Carpeg.expression inherits object {
 	bound public <string>function error(Carpeg.expression exp, string code, string err, string char) {}
 	
 	bound public <string>function move(Carpeg.expression exp) {}
+
+	bound public <string>function inject(Carpeg.expression exp) {}
 
 	bound public <string>function put(Carpeg.context ctx, string cap, string thing) {}
 

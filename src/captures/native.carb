@@ -54,6 +54,7 @@ class Carpeg.expressions.native inherits Carpeg.expression {
 		
 		out = [
 			elser, " (c == ", this.context.checkerIndex, ") {\n",
+			"	", this.callInject(),
 			"	var ", this.outputType, " ", cast, " = ", this.captureRoot(), "[\"", this.parentLabel, "\"];\n",
 			"	", casterCode, "\n",
 			"	", code,

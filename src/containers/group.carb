@@ -41,6 +41,7 @@ class Carpeg.expressions.group inherits Carpeg.expression {
 		var map data = this.baked["expression"];
 		this.expression = Carpeg.expression.make(data);
 		this.expression.apply(this);
+		this.expression.depth = this.depth + 1;
 		this.expression.context = new Carpeg.context();
 		
 		this.expression.context.copyOverrides(this.context);

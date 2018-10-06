@@ -31,6 +31,7 @@ class Carpeg.expressions.stringLiteral inherits Carpeg.expression {
 		if (this.literal.length() > 1) {
 			out = [
 				elser, " (c == ", this.context.checkerIndex, ") {\n",
+				"	", this.callInject(),
 				"	var <int>array lit", this.context.checkerIndex, " = [", codes.join(", "), "];\n",
 				"	if (currentCode == lit", this.context.checkerIndex, "[literalChar]) {\n",
 				"		literalChar++;\n",

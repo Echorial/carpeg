@@ -57,12 +57,16 @@ class Carpeg.context inherits object {
 			return "c = " + this.next + ";";
 		}
 	}
+
+	bound public <string>function escapeExpected(string ex) {
+		return ex.replace("\n", "New line").replace("\r", "\\r").replace("\t", "\\t");
+	}
 	
 	bound public <string>function doError(int code, string errorString, string char) {
 		if (this.doOverError) {
 			//return this.error.error(this, code, errorString, char);
 		}else{
-			return "this.giveError(" + code + ", \"" + errorString + "\", " + char + ");";
+			return "this.giveError(" + code + ", \"" + this.escapeExpected(errorString) + "\", " + char + ");";
 		}
 	}
 

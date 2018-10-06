@@ -32,10 +32,16 @@ class Carpeg.expressions.optional inherits Carpeg.expression {
 
 		this.expression.doError = true;
 		this.expression.overError = this;
+		this.expression.doInject = true;
+		this.expression.overInject = this;
 
 		this.expression.build();
 
 		this.outputType = this.expression.outputType;
+	}
+
+	bound public override <string>function inject(Carpeg.expression exp) {
+		return "this.groupErrors();\n";
 	}
 
 	bound public override <string>function resetDatas(bool already) {
@@ -47,6 +53,6 @@ class Carpeg.expressions.optional inherits Carpeg.expression {
 		if (this.parentRule.checkerIndex == 0) {
 			ctx = 2;
 		}
-		return this.parentRule.moveNext(ctx) + " charPos--; this.offset--;";
+		return "this.popGroup(); " + this.parentRule.moveNext(ctx) + " charPos--; this.offset--;";
 	}
 }
