@@ -23,7 +23,7 @@ $ npm install carpeg-cli
 import WhiteSpace
 import String
 
-map|start = "~" _ items: Item*|"|" _ "~" {items: {$items}};
+map|start = "~" _ items: Item*|"|" _ "~";
 
 map|Item = _ value: ([0-9] / String)
 {map|
