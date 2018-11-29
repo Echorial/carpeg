@@ -20,8 +20,8 @@ $ npm install carpeg-cli
 ## Basic parser
 ``` js
 // myParser.cpeg
-import WhiteSpace;
-import String;
+import WhiteSpace
+import String
 
 map|start = "~" _ items: Item*|"|" _ "~" {items: {$items}};
 
