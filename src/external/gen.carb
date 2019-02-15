@@ -16,7 +16,7 @@ bound public <CarpegNativeParserError>array path = new <CarpegNativeParserError>
 bound public <CarpegNativeParserError>function clone() {var CarpegNativeParserError clone = new CarpegNativeParserError(this.offset, this.line, this.column); clone.code = this.code; clone.found = this.found; clone.expected = this.expected; clone.vested = this.vested; for (var int i in this.path) {var CarpegNativeParserError current = this.path[i]; clone.path.push(current.clone());} return clone;}}
 
 class <class T>CarpegNativeParserOutput {
-	fixed public <<T>CarpegNativeParserOutput>function @construct(bool hadError, CarpegNativeParserError error, map data) {this.hadError = hadError; this.error = error; this.data = data;}
+	fixed public <void>function @construct(bool hadError, CarpegNativeParserError error, map data) {this.hadError = hadError; this.error = error; this.data = data;}
 	bound public CarpegNativeParserError error = empty;
 	bound public bool hadError = false;
 	bound public map data = new map();

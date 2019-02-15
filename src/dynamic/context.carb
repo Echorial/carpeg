@@ -1,0 +1,15 @@
+class Carpeg.Context {
+	string raw = "";
+	uint64 index = 0;
+
+	bool hadError = false;
+	
+
+	char read(uint64 indx) {
+		return this.raw.charAt(indx);
+	}
+
+	char read() {
+		return this.read(this.index);
+	}
+}

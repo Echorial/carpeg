@@ -1,0 +1,70 @@
+start = Item*;
+
+Item = 
+	Name ":" ~
+	(
+		{"\t" for depth}
+		Value
+	)*
+
+Value = String / Item
+
+String = {native.string}
+
+.rule("Value")
+	.choice()
+		.rule("String")
+		.rule("Item")
+	.up()
+	.literal("abc");
+
+class carpegList extends Carpeg.Branch {
+	int min = 0;
+
+	void control(Carpeg.Context ctx) {
+		if (this.child != null) {
+			this.child.control(ctx);
+
+			if (ctx.hadError) {
+				
+			}
+		}
+	}
+}
+
+abc:
+	test:
+		"t2"
+		c
+		"abc"
+
+class carpegNativeString extends Carpeg.Branch {
+	void control(Carpeg.Context ctx) {
+		let start = ctx.index;
+		let parsing = true;
+		let string character = null;
+		let builder = "";
+
+		while (parsing) {
+			let chr = ctx.raw[ctx.index];
+			if (character == null and (chr == '"' or chr == "'")) {
+				character = chr;
+			}else if (character != null) {
+				parsing = false;
+			}else{
+				builder += chr;
+			}
+
+			ctx.index++;
+		}
+
+		ctx.result(new Carpeg.Nodes.String(builder, start, ctx.index));
+	}
+}
+
+
+abc:
+	"Hello"
+	test:
+		abc
+	another: 2

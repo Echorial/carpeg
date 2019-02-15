@@ -1,0 +1,8 @@
+class Carpeg.Branch {
+	int depth = 0;
+	Carpeg.Branch parent = null;
+
+	uint64 benchmark = 0;
+
+	void control(Carpeg.Context ctx);
+}
