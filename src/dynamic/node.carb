@@ -1,0 +1,10 @@
+namespace Carpeg.Nodes {}
+
+class Carpeg.Node {
+	bool primitive = false;
+
+	void setProperty(int index, Carpeg.Node& value) {}
+	Carpeg.Node& getProperty(int index) {}
+
+	int indexOfProperty(string name) {}
+}

@@ -1,0 +1,16 @@
+class Carpeg.Branches.Label extends Carpeg.BranchSingleChild {
+	string label = "";
+	int propertyIndex = 0;
+
+	void control(Carpeg.Context& ctx, Carpeg.LocalContext& lCtx) {
+		if (lCtx.updateCycle) {
+			this.propertyIndex = lCtx.node.indexOfProperty(this.label);
+		}
+
+		var childCtx = new Carpeg.LocalContext();
+
+		this.child.control(ctx, childCtx);
+
+		lCtx.node.setProperty(this.propertyIndex, childCtx.node);
+	}
+}

@@ -1,0 +1,29 @@
+class ParseRoot extends Carpeg.Node {
+	[Parsed]
+	int value = 0;
+
+	[Parsed]
+	string name = "";
+}
+
+class UseTest {
+	void test() {
+		let root = new ParseRoot();
+		let parser = new Carpeg.Parser();
+
+		parser
+			.rule("start")
+				.literal("begin ")
+				.label("value")
+					.jump("number")
+				.up()
+				.literal(" ")
+				.label("name")
+					.capture(["a-z", "A-Z", "-_"]).list(0);
+				.up();
+		
+		let output = parser.start(root, "begin 943 hello");
+
+		root.name == "hello";
+	}
+}

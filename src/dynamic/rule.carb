@@ -1,0 +1,19 @@
+class Carpeg.Rule {
+	Carpeg.Parser& parser = null;
+	string name = null;
+	Carpeg.Branches.Sequence branch = null;
+
+	void @construct(string name) {
+		this.name = name;
+	}
+
+	void setParser(Carpeg.Parser& parser) {
+		this.parser = parser;
+	}
+
+	Carpeg.BranchBuilder builder() {
+		this.branch = new Carpeg.Branches.Sequence();
+
+		return new Carpeg.BranchBuilder(this.branch);
+	}
+}

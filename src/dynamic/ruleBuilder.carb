@@ -1,0 +1,13 @@
+class Carpeg.RuleBuilder {
+	Carpeg.Rule& rule = null;
+
+	void @construct() {
+
+	}
+
+	Carpeg.RuleBuilder& literal(string str) {
+		
+
+		return this;
+	}
+}

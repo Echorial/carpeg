@@ -1,8 +1,56 @@
+namespace Carpeg.Branches {}
+
 class Carpeg.Branch {
 	int depth = 0;
-	Carpeg.Branch parent = null;
+	bool canRecover = false;
+	Carpeg.Branch& parent = null;
+	int childIndex = 0;
 
 	uint64 benchmark = 0;
 
-	void control(Carpeg.Context ctx);
+	void control(Carpeg.Context& ctx, Carpeg.LocalContext& lCtx);
+
+	Carpeg.Branch remove(Carpeg.Branch& child) {
+
+	}
+
+	void reinsert(int index, Carpeg.Branch newChild) {
+		
+	}
+
+	void setParent(Carpeg.Branch& parent) {
+		this.parent = parent;
+	}
+}
+
+class Carpeg.BranchSingleChild extends Carpeg.Branch {
+	Carpeg.Branch child = null;
+
+	void control(Carpeg.Context& ctx, Carpeg.LocalContext& lCtx);
+
+	override Carpeg.Branch remove(Carpeg.Branch& child) {
+		return this.child;
+	}
+
+	override void reinsert(int index, Carpeg.Branch newChild) {
+		this.child = newChild;
+	}
+}
+
+class Carpeg.BranchMultiChild extends Carpeg.Branch {
+	<Carpeg.Branch>array children = new <Carpeg.Branch>array();
+
+	void control(Carpeg.Context& ctx, Carpeg.LocalContext& lCtx);
+
+	override Carpeg.Branch remove(Carpeg.Branch& child) {
+		let removed = this.children.move(child.childIndex);
+
+		this.children.remove(child.childIndex);
+
+		return removed;
+	}
+
+	override void reinsert(int index, Carpeg.Branch newChild) {
+		this.children[index] = newChild;
+	}
 }

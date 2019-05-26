@@ -1,0 +1,48 @@
+class Carpeg.BranchBuilder {
+	Carpeg.BranchMultiChild& branch = null;
+	Carpeg.BranchMultiChild& upBranch = null;
+
+	void @construct(Carpeg.Branch& branch) {
+		this.branch = branch;
+	}
+
+	Carpeg.BranchBuilder up() {
+		return new Carpeg.BranchBuilder(this.upBranch);
+	}
+
+	Carpeg.BranchBuilderSingle literal(string literal) {
+		let literalBranch = new Carpeg.Branches.Literal(literal);
+		let singleBuilder = new Carpeg.BranchBuilderSingle(literalBranch);
+
+		literalBranch.setParent(this.branch);
+
+		this.branch.children.push(literalBranch);
+
+		return singleBuilder;
+	}
+}
+
+class Carpeg.BranchBuilderSingle {
+	Carpeg.Branch& branch = null;
+
+	void @construct(Carpeg.Branch& branch) {
+		this.branch = branch;
+	}
+
+	Carpeg.BranchBuilderSingle list(int min) {
+		let movedBranch = this.branch.parent.remove(this.branch);
+		let movedIndex = movedBranch.childIndex;
+
+		let newBranch = new Carpeg.Branches.List(movedBranch);
+		
+		newBranch.setParent(movedBranch.parent);
+
+		newBranch.min = min;
+
+		movedBranch.setParent(newBranch);
+
+		this.branch.parent.reinsert(movedIndex, newBranch);
+
+		return new Carpeg.BranchBuilderSingle(newBranch);
+	}
+}

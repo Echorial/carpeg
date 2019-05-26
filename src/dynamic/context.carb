@@ -4,6 +4,23 @@ class Carpeg.Context {
 
 	bool hadError = false;
 	
+	bool compare(string to) {
+		native cpp {
+			return this->raw.compare(this->index, _Lto.size(), _Lto);
+		}
+
+		#if platform.javascript
+			return this.raw.substr(this.index, to.length) == to;
+		#end if
+
+		#if platform.php
+			return this.raw.substr(this.index, to.length) == to;
+		#end if
+	}
+
+	void move(string str) {
+		this.index += str.length;
+	}
 
 	char read(uint64 indx) {
 		return this.raw.charAt(indx);

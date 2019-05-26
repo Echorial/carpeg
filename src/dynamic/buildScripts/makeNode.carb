@@ -1,0 +1,53 @@
+#script Carbon
+
+let castProp = void (Carbon.Class cls) => {
+	let rtn = cls.route;
+
+	if (cls.route == "string") {
+		rtn = "Carpeg.Nodes.String";
+	}
+
+	if (cls.route == "int") {
+		rtn = "Carpeg.Nodes.Integer";
+	}
+
+	if (cls.route == "float") {
+		rtn = "Carpeg.Nodes.Float";
+	}
+
+	if (cls.route == "array") {
+		rtn = "Carpeg.Nodes.Array";
+	}
+
+	return rtn;
+};
+
+let makeNode = void (Carbon.Class node) => {
+	let setProp = [];
+	let indexOfProp = [];
+
+	for (let int i = 0; i < node.members.length; i += 1) {
+		let member = node.members[i];
+
+		if (member.type == "property") {
+			if (typeOf(member.getAttribute("Parsed")) != "null") {
+				let cp = castProp(member.output.reference);
+				var iStr = i.toString();
+				setProp.push("if (index == " + iStr + ") {let " + cp + "& valCast = setNode; this." + member.name + " = valCast.getValue();}");
+				indexOfProp.push("if (name == \"" + member.name + "\") {return " + iStr + ";}");
+			}
+		}
+	}
+
+	Carbon.Method.eval("destroy override void setProperty(int index, Carpeg.Node& setNode) {" + setProp.join("else ") + "}", node);
+
+	Carbon.Method.eval("destroy override int indexOfProperty(string name) {" + indexOfProp.join("else ") + "}", node);
+};
+
+Carbon.on("inherits.Carpeg.Node", void (Carbon.Class base, Carbon.Class cls) => {
+	if (cls.route != "Carpeg.Nodes.String") {
+		makeNode(cls);
+	}
+});
+
+#end script

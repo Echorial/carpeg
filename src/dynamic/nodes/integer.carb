@@ -1,0 +1,11 @@
+class Carpeg.Nodes.Integer extends Carpeg.Node {
+	int value = 0;
+
+	void @construct() {
+		this.primitive = true;
+	}
+
+	int getValue() {
+		return this.value;
+	}
+}

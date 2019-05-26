@@ -1,0 +1,12 @@
+class Carpeg.Branches.List extends Carpeg.BranchSingleChild {
+	int min = 0;
+	string deliminator = "";
+
+	void @construct(Carpeg.Branch child) {
+		this.child = child;
+	}
+
+	void control(Carpeg.Context& ctx, Carpeg.LocalContext& lCtx) {
+		
+	}
+}

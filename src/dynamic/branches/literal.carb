@@ -1,0 +1,17 @@
+class Carpeg.Branches.Literal extends Carpeg.Branch {
+	string literal = "";
+
+	void @construct(string literal) {
+		this.literal = literal;
+	}
+
+	void control(Carpeg.Context& ctx, Carpeg.LocalContext& lCtx) {
+		lCtx.node = new Carpeg.Nodes.String(this.literal);
+
+		if (ctx.compare(this.literal) or this.canRecover) {
+			ctx.move(this.literal);
+		}else{
+			lCtx.expected(this.literal);
+		}
+	}
+}

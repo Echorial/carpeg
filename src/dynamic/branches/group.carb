@@ -1,0 +1,9 @@
+class Carpeg.Branches.Group extends Carpeg.BranchSingleChild {
+	void @construct(Carpeg.Branch child) {
+		this.child = child;
+	}
+
+	void control(Carpeg.Context& ctx, Carpeg.LocalContext& lCtx) {
+		
+	}
+}

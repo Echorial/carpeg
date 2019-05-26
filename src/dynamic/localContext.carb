@@ -1,0 +1,27 @@
+class Carpeg.LocalContext {
+
+	Carpeg.Node node = null;
+
+	bool updateCycle = false;
+
+	bool error = false;
+
+	string expectedString = null;
+
+	void @construct() {
+
+	}
+
+	void expected(string str) {
+		this.error = true;
+		this.expectedString = str;
+	}
+
+	void inheritError(Carpeg.LocalContext& ctx) {
+		if (ctx.error) {
+			this.error = true;
+
+			this.expectedString = ctx.expectedString;
+		}
+	}
+}

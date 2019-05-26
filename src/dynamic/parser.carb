@@ -1,0 +1,18 @@
+class Carpeg.Parser {
+	<Carpeg.Rule>array rules = new <Carpeg.Rule>array();
+
+	void @construct() {
+
+	}
+
+	Carpeg.Rule& rule(string name) {
+		let rule = new Carpeg.Rule(name);
+		let Carpeg.Rule& rRef = rule;
+		
+		this.rules.push(rule);
+
+		rule.setParser(this);
+
+		return rRef;
+	}
+}

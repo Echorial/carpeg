@@ -1,0 +1,12 @@
+class Carpeg.Nodes.String extends Carpeg.Node {
+	string value = null;
+
+	void @construct(string initValue) {
+		this.primitive = true;
+		this.value = initValue;
+	}
+
+	string getValue() {
+		return this.value;
+	}
+}

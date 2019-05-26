@@ -1,0 +1,39 @@
+{
+	"Hello": 123,
+	"abc": {,
+	        ^- expected '}'
+	"Testing": "Abc"
+}
+
+.rule("Object")
+	.literal("{")
+	.group()
+		
+		.option("capture", '"')
+		.jump("String")
+		.label("name")
+
+		._()
+		.literal(":")
+		._()
+		
+		.jump("Value")
+		.label("value")
+	.up().list(0, ",", true)
+	.literal("}");
+
+.rule("Value")
+	.choice()
+		.option("capture", '"')
+		.jump("String")
+
+		.option("capture", "'")
+		.jump("String")
+
+		.jump("Number")
+
+		.jump("Object")
+	.up();
+
+.rule("start")
+	.jump("Object");

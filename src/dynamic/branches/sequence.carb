@@ -1,0 +1,11 @@
+class Carpeg.Branches.Sequence extends Carpeg.BranchMultiChild {
+	void @construct() {
+		
+	}
+
+	void control(Carpeg.Context& ctx, Carpeg.LocalContext& lCtx) {
+		for (let int i in this.children) {
+			let child = this.children[i];
+		}
+	}
+}
